@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <time.h>
 
+// Since we working in Visual Studio
+#pragma comment(lib, "detours.lib")
+
 typedef HMODULE (WINAPI *t_LoadLibrary)(LPCSTR);
 t_LoadLibrary g_pfnLoadLibrary = 0;
 
@@ -48,7 +51,7 @@ BOOL WINAPI DllMain(_In_ HANDLE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOID
 {
 	if(_Reason == DLL_PROCESS_ATTACH) {
 		AppendLog("C:\\LoadLibraryHook.log", "Injection Successful.");
-		g_pfnLoadLibrary = (t_LoadLibrary)DetourFunction((LPBYTE)DetourFindFunction("kernel32.dll", "LoadLibraryA"), (LPBYTE)h_LoadLibrary);
+		g_pfnLoadLibrary = (t_LoadLibrary)DetourFunction((LPBYTE)LoadLibraryA, (LPBYTE)h_LoadLibrary);
 		AppendLog("C:\\LoadLibraryHook.log", "LoadLibraryA 0x%X -> 0x%X", (DWORD)LoadLibraryA, (DWORD)h_LoadLibrary);
 	}
 	if(_Reason == DLL_PROCESS_DETACH) 
