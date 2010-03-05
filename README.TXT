@@ -11,3 +11,4 @@ Basic outline of how the hook is to work (at this stage):
 Notes:
 
 * Creating dummy device might fail
+* Git merges seem to be dodgy
