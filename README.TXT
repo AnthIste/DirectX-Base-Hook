@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Basic outline of how the hook is to work (at this stage):
  
 * Inject dll into remote process
@@ -7,3 +8,6 @@ Basic outline of how the hook is to work (at this stage):
 * Hook using the vtable
 * Delete objects
 * Unhook on exit
+=======
+I think I got the hang of this?
+>>>>>>> AnthIste-jobs
