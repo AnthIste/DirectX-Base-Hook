@@ -40,7 +40,7 @@ VOID __cdecl AppendLog(LPCSTR lpFile, const char *lpText, ...)
 
 HMODULE WINAPI h_LoadLibrary(LPCSTR lpLibName)
 {
-	AppendLog("C:\\LoadLibraryHook.log", "Loaded: %s", lpLibName);
+	//AppendLog("C:\\LoadLibraryHook.log", "Loaded: %s", lpLibName);
 	return g_pfnLoadLibrary(lpLibName);
 }
 
