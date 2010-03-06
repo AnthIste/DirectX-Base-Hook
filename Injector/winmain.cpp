@@ -14,10 +14,13 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				
 				// Get the path of the dll to inject and the mode of injection
 				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(dllName));
+
 				int bChecked = SendMessage(GetDlgItem(hWnd, IDC_CBX_AUTOINJECT), BM_GETCHECK, 0, 0);
-				
+
 				if (bChecked) {
 					// Start the process and inject
+					SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(exeName));
+					injector.InjectAuto(dllName, exeName);
 				} else {
 					// Get the name of the target process
 					int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);

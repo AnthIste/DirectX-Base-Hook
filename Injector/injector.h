@@ -27,7 +27,8 @@ class CInjector {
 		CInjector();
 		~CInjector();
 
-		int Inject(std::wstring dllPath, std::wstring processName);
+		int Inject(std::wstring dllPath, std::wstring processName, DWORD pId = 0);
+		int InjectAuto(std::wstring dllPath, std::wstring processPath);
 		int Unload(std::wstring dllName, std::wstring processName);
 		int RefreshProcessList();
 		ProcessList_t GetProcessList();

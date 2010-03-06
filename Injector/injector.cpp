@@ -15,9 +15,8 @@ CInjector::~CInjector()
 }
 
 // Injects the dll specified by dllPath into the target process
-int CInjector::Inject(std::wstring dllPath, std::wstring processName)
+int CInjector::Inject(std::wstring dllPath, std::wstring processName, DWORD pId)
 {
-	DWORD pId;
 	HANDLE hProc, hThread;
 	HMODULE hModule;
 	int len;
@@ -26,13 +25,17 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName)
 	std::wstring dllName = StripPath(dllPath);
 
 	try {
-		// Open the process & get the process handle
-		pId = GetProcessIdByName(processName);
+		// if pId not already specified, look for it
+		if (!pId) {
+			pId = GetProcessIdByName(processName);
+		}
 		
+		// if its still not found, serious error, abort
 		if (!pId) {
 			throw std::exception("Process ID not found");
 		}
 
+		// Open the process & get the process handle
 		hProc = OpenProcess(CREATE_THREAD_ACCESS, 0, pId);
 
 		if (!hProc) {
@@ -87,6 +90,45 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName)
 		VirtualFreeEx(hProc, pRemoteString, len * sizeof(wchar_t), MEM_FREE);
 		CloseHandle(hProc);
 
+		throw;
+	}
+}
+
+// Injects the dll specified by dllPath after creating the target process
+int CInjector::InjectAuto(std::wstring dllPath, std::wstring processPath)
+{
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+
+	ZeroMemory(&pi, sizeof(pi));
+	ZeroMemory(&si, sizeof(si));
+
+	si.cb = sizeof(si);
+
+	try {
+		// Create the process
+		if (!CreateProcessW(0,
+			const_cast<LPWSTR>(processPath.c_str()),
+			0,
+			0,
+			false,
+			CREATE_SUSPENDED,
+			0,
+			0,
+			&si,
+			&pi)) throw std::exception("Could not create process");
+
+		// Inject the dll by specific process Id
+		std::wstring processName = StripPath(processPath);
+		int bInjected = Inject(dllPath, processName, pi.dwProcessId);
+
+		// Resume
+		ResumeThread(pi.hThread);
+
+		return bInjected;
+	}
+	catch (std::exception e) {
+		TerminateProcess(pi.hProcess, 0);
 		throw;
 	}
 }
