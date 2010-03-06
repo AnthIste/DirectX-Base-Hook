@@ -1,6 +1,0 @@
-~.gitignore
-Debug/
-Release/
-*/Debug
-*/Release
-*/*.ncb
