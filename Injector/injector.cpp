@@ -85,8 +85,6 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName, DWORD pId)
 		return reinterpret_cast<int>(hModule);
 	}
 	catch (std::exception e) {
-		// Get system error message
-
 		VirtualFreeEx(hProc, pRemoteString, len * sizeof(wchar_t), MEM_FREE);
 		CloseHandle(hProc);
 
@@ -196,7 +194,7 @@ DWORD CInjector::GetProcessIdByName(std::wstring processName)
 {
 	HANDLE hSnap;
 	DWORD pId = 0;
-	PROCESSENTRY32 pe32;
+	PROCESSENTRY32W pe32;
 	pe32.dwSize = sizeof(PROCESSENTRY32);
 
 	try {
