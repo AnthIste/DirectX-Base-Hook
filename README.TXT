@@ -7,3 +7,6 @@ Basic outline of how the hook is to work (at this stage):
 * Hook using the vtable
 * Delete objects
 * Unhook on exit
+
+
+And thats it folks
