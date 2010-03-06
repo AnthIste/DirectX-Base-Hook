@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <string>
+#include <sstream>
 #include <map>
 #include <list>
 
@@ -26,11 +27,11 @@ class CInjector {
 
 		int Inject(std::wstring dllPath, std::wstring processName);
 		int Unload(std::wstring dllName, std::wstring processName);
+		int RefreshProcessList();
 		ProcessList_t GetProcessList();
 
 
 	private:
-		int RefreshProcessList();
 		HANDLE GetProcessHandleByName(std::wstring processName);
 		DWORD GetProcessIdByName(std::wstring processName);
 		std::wstring StripPath(std::wstring filePath);

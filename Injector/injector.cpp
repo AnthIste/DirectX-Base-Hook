@@ -96,22 +96,26 @@ int CInjector::Unload(std::wstring dllName, std::wstring processName)
 	return 1;
 }
 
+// Scans all processes in the system and stores them in a list (by name)
+int CInjector::RefreshProcessList()
+{
+	processNames.clear();
+
+	for (int k = 0; k < 20; k++) {
+		std::wstringstream ss;
+		ss << L"Process" << k << L".exe";
+		processNames.push_back(ss.str().c_str());
+	}
+
+	return 1;
+}
+
 // Returns a string list of all processes since the last refresh
 CInjector::ProcessList_t CInjector::GetProcessList()
 {
 	RefreshProcessList();
 
 	return processNames;
-}
-
-// Scans all processes in the system and stores them in a list (by name)
-int CInjector::RefreshProcessList()
-{
-	processNames.clear();
-	processNames.push_back(L"Process1.exe");
-	processNames.push_back(L"Process2.exe");
-
-	return 1;
 }
 
 // Returns a handle based on the process name eg notepad.exe

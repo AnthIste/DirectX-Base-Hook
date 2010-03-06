@@ -9,34 +9,94 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 	switch (wParam) {
 		case IDC_BTN_INJECT:
 			{
+				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
+				
+				// Get the path of the dll to inject
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, 0, reinterpret_cast<LPARAM>(dllName));
 
+				// Get the name of the target process
+				int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);
+				SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETTEXT, exeIndex, reinterpret_cast<LPARAM>(exeName));
+
+				// Inject the dll
+				if (!injector.Inject(dllName, exeName)) {
+					MessageBoxW(hWnd, L"Injection failed", L"Injector", MB_ICONERROR);
+				}
 			}
 			break;
 
 		case IDC_BTN_REFRESH:
 			{
+				// Clear the process list
 				SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_RESETCONTENT, 0, 0);
 
+				// Get a new list of processes
 				CInjector::ProcessList_t processes = injector.GetProcessList();
 				CInjector::ProcessList_t::iterator i;
 
+				// Iterate the process list and put it in the listbox
 				for (i = processes.begin(); i != processes.end(); i++) {
 					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_ADDSTRING, 0, reinterpret_cast<LPARAM>((*i).c_str()));
 				}
 
+				// Select the first item by default
 				SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_SETCURSEL, 0, 0);
 			}
 			break;
 
 		case IDC_BTN_DLL:
 			{
+				// Get the path that the user specifies
+				OPENFILENAMEW ofn;
+				memset((void*)&ofn, 0, sizeof(ofn));
 
+				wchar_t fileName[MAX_PATH] = {0};
+
+				ofn.hwndOwner = hWnd;
+				ofn.lpstrFile = fileName;
+				ofn.lpstrFilter = L"Supported Files (*.dll)\0*.dll\0";
+				ofn.nMaxCustFilter = 40;
+				ofn.lStructSize = sizeof(ofn);
+				ofn.nMaxFile = MAX_PATH;
+
+				GetOpenFileNameW(&ofn);
+
+				// Write it to the edit control
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_SETTEXT, 0, reinterpret_cast<LPARAM>(fileName));
 			}
 			break;
 
 		case IDC_BTN_UNLOAD:
 			{
+				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
+				
+				// Get the path of the dll to unload
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, 0, reinterpret_cast<LPARAM>(dllName));
 
+				// Get the name of the target process
+				int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);
+				SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETTEXT, exeIndex, reinterpret_cast<LPARAM>(exeName));
+
+				// Unload the dll
+				if (!injector.Unload(dllName, exeName)) {
+					MessageBoxW(hWnd, L"Unloading failed", L"Injector", MB_ICONERROR);
+				}
+			}
+			break;
+
+		case IDC_CBX_AUTOINJECT:
+			{
+				int bChecked = SendMessage(GetDlgItem(hWnd, IDC_CBX_AUTOINJECT), BM_GETCHECK, 0, 0);
+
+				if (bChecked) {
+					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), WM_ENABLE, 0, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_BTN_PROCESS), WM_ENABLE, 0, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_ENABLE, 1, 0);
+				} else {
+					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), WM_ENABLE, 1, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_BTN_PROCESS), WM_ENABLE, 1, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_ENABLE, 0, 0);
+				}
 			}
 			break;
 	}
@@ -50,13 +110,17 @@ BOOL CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				EndDialog(hWnd, 0);
 				break;
 
+			case WM_INITDIALOG:
+				HandleEvent(hWnd, IDC_BTN_REFRESH, 0);
+				break;
+
 			case WM_COMMAND:
 				HandleEvent(hWnd, wParam, lParam);
 				break;
 		}
 	}
 	catch (std::exception e) {
-		MessageBoxW(hWnd, reinterpret_cast<LPCWSTR>(e.what()), L"Injector", MB_ICONERROR);
+		MessageBoxA(hWnd, e.what(), "Injector", MB_ICONERROR);
 	}
 
 	return FALSE;
