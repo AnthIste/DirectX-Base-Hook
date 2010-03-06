@@ -10,6 +10,7 @@
 
 // Since we working in Visual Studio
 #pragma comment(lib, "detours.lib")
+#pragma warning(disable : 4996)
 
 typedef HMODULE (WINAPI *t_LoadLibrary)(LPCSTR);
 t_LoadLibrary g_pfnLoadLibrary = 0;
