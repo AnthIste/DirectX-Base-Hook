@@ -5,3 +5,4 @@ Injector/Debug
 Injector/Release
 LoadLibraryHook/Debug
 LoadLibraryHook/Release
+*/*.ncb
