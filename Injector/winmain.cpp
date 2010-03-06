@@ -11,16 +11,21 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 			{
 				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
 				
-				// Get the path of the dll to inject
+				// Get the path of the dll to inject and the mode of injection
 				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, 0, reinterpret_cast<LPARAM>(dllName));
+				int bChecked = SendMessage(GetDlgItem(hWnd, IDC_CBX_AUTOINJECT), BM_GETCHECK, 0, 0);
+				
+				if (bChecked) {
+					// Start the process and inject
+				} else {
+					// Get the name of the target process
+					int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETTEXT, exeIndex, reinterpret_cast<LPARAM>(exeName));
 
-				// Get the name of the target process
-				int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);
-				SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETTEXT, exeIndex, reinterpret_cast<LPARAM>(exeName));
-
-				// Inject the dll
-				if (!injector.Inject(dllName, exeName)) {
-					MessageBoxW(hWnd, L"Injection failed", L"Injector", MB_ICONERROR);
+					// Inject the dll normally
+					if (!injector.Inject(dllName, exeName)) {
+						MessageBoxW(hWnd, L"Injection failed", L"Injector", MB_ICONERROR);
+					}
 				}
 			}
 			break;
@@ -66,6 +71,28 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 
+		case IDC_BTN_PROCESS:
+			{
+				// Get the path that the user specifies
+				OPENFILENAMEW ofn;
+				memset((void*)&ofn, 0, sizeof(ofn));
+
+				wchar_t fileName[MAX_PATH] = {0};
+
+				ofn.hwndOwner = hWnd;
+				ofn.lpstrFile = fileName;
+				ofn.lpstrFilter = L"Supported Files (*.exe)\0*.dll\0All Files (*.*)\0*.*\0";
+				ofn.nMaxCustFilter = 40;
+				ofn.lStructSize = sizeof(ofn);
+				ofn.nMaxFile = MAX_PATH;
+
+				GetOpenFileNameW(&ofn);
+
+				// Write it to the edit control
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_SETTEXT, 0, reinterpret_cast<LPARAM>(fileName));
+			}
+			break;
+
 		case IDC_BTN_UNLOAD:
 			{
 				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
@@ -89,13 +116,13 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				int bChecked = SendMessage(GetDlgItem(hWnd, IDC_CBX_AUTOINJECT), BM_GETCHECK, 0, 0);
 
 				if (bChecked) {
-					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), WM_ENABLE, 0, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_BTN_PROCESS), WM_ENABLE, 0, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_ENABLE, 1, 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_LIST_PROCESSES), 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_PROCESS), 1);
+					EnableWindow(GetDlgItem(hWnd, IDC_EDIT_PROCESS), 1);
 				} else {
-					SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), WM_ENABLE, 1, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_BTN_PROCESS), WM_ENABLE, 1, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_EDIT_PROCESS), WM_ENABLE, 0, 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_LIST_PROCESSES), 1);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_PROCESS), 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_EDIT_PROCESS), 0);
 				}
 			}
 			break;
