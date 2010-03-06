@@ -133,8 +133,7 @@ std::wstring CInjector::StripPath(std::wstring filePath)
 	} while (pos != std::wstring::npos);
 
 	if (last != std::wstring::npos) {
-		std::wstring result = filePath.substr(pos, filePath.length() - pos);
-		return result;
+		return filePath.substr(pos, filePath.length() - pos);
 	} else {
 		return filePath;
 	}
