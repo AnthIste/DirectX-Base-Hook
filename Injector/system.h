@@ -7,6 +7,7 @@
 namespace System {
 
 std::wstring GetSystemError();
+int SetDebugPrivilege();
 
 }
 

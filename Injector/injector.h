@@ -37,6 +37,7 @@ class CInjector {
 	private:
 		DWORD GetProcessIdByName(std::wstring processName);
 		std::wstring StripPath(std::wstring filePath);
+		int SetDebugPrivilege();
 
 		static ProcessMap_t processes;
 		static ProcessList_t processNames;
