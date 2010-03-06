@@ -175,6 +175,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\system.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\winmain.cpp"
 				>
 			</File>
@@ -186,6 +190,10 @@
 			>
 			<File
 				RelativePath=".\injector.h"
+				>
+			</File>
+			<File
+				RelativePath=".\system.h"
 				>
 			</File>
 		</Filter>

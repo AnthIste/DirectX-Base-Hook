@@ -9,6 +9,7 @@
 #include <list>
 
 class CInjector {
+	enum { CREATE_THREAD_ACCESS = (PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ) };
 	typedef std::map<std::wstring,HMODULE> ModuleMap_t;			// Map of all injected modules (by name) in a process
 
 	struct Process_t {											// Structure to describe a process
@@ -33,7 +34,6 @@ class CInjector {
 
 
 	private:
-		HANDLE GetProcessHandleByName(std::wstring processName);
 		DWORD GetProcessIdByName(std::wstring processName);
 		std::wstring StripPath(std::wstring filePath);
 

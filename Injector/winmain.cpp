@@ -1,5 +1,6 @@
 #include <windows.h>
 #include "resource.h"
+#include "system.h"
 #include "injector.h"
 
 void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
@@ -12,7 +13,7 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
 				
 				// Get the path of the dll to inject and the mode of injection
-				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, 0, reinterpret_cast<LPARAM>(dllName));
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(dllName));
 				int bChecked = SendMessage(GetDlgItem(hWnd, IDC_CBX_AUTOINJECT), BM_GETCHECK, 0, 0);
 				
 				if (bChecked) {
@@ -24,7 +25,11 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 
 					// Inject the dll normally
 					if (!injector.Inject(dllName, exeName)) {
-						MessageBoxW(hWnd, L"Injection failed", L"Injector", MB_ICONERROR);
+						std::wstringstream ss;
+						ss << L"Could not inject " << dllName << L" into " << exeName;
+						MessageBoxW(hWnd, ss.str().c_str(), L"Injector", MB_ICONERROR);
+					} else {
+						MessageBoxW(hWnd, L"Dll injected!", L"Injector", MB_ICONINFORMATION);
 					}
 				}
 			}
@@ -151,7 +156,9 @@ BOOL CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	catch (std::exception e) {
-		MessageBoxA(hWnd, e.what(), "Injector", MB_ICONERROR);
+		std::wstringstream ss;
+		ss << e.what() << std::endl << System::GetSystemError();
+		MessageBoxW(hWnd, ss.str().c_str(), L"Injector", MB_ICONERROR);
 	}
 
 	return FALSE;

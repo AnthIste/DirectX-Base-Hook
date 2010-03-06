@@ -28,26 +28,36 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName)
 	try {
 		// Open the process & get the process handle
 		pId = GetProcessIdByName(processName);
-		hProc = OpenProcess(PROCESS_VM_WRITE | PROCESS_CREATE_THREAD, 0, pId);
+		
+		if (!pId) {
+			throw std::exception("Process ID not found");
+		}
+
+		hProc = OpenProcess(CREATE_THREAD_ACCESS, 0, pId);
 
 		if (!hProc) {
 			throw std::exception("Could not open process!");
 		}
 
 		// Allocate remote memory for remote string
-		len = processName.length() + 1;
-		pRemoteString = VirtualAllocEx(hProc, 0, len * sizeof(wchar_t), MEM_COMMIT, PAGE_READWRITE);
+		len = dllPath.length() + 2;
+		
+		pRemoteString = VirtualAllocEx(hProc, 0, len * sizeof(wchar_t), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 		if (!pRemoteString) {
 			throw std::exception("Could not allocate remote memory!");
 		}
 
 		// Write a remote string of the dll path
-		if (!WriteProcessMemory(hProc, pRemoteString, (void*)processName.c_str(), len * sizeof(wchar_t), 0)) {
+		if (!WriteProcessMemory(hProc, pRemoteString, (void*)dllPath.c_str(), len * sizeof(wchar_t), 0)) {
 			throw std::exception("Could not write remote string!");
 		}
 
 		// Create remote thread of loadlibrary with path as paramater
 		pLoadLibrary = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW");
+		if (!pLoadLibrary) {
+			throw std::exception("Could not find address of LoadLibraryW!");
+		}
+
 		hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)pLoadLibrary, pRemoteString, 0, 0);
 		if (!hThread) {
 			throw std::exception("Could not create remote thread!");
@@ -139,16 +149,40 @@ CInjector::ProcessList_t CInjector::GetProcessList()
 	return processNames;
 }
 
-// Returns a handle based on the process name eg notepad.exe
-HANDLE CInjector::GetProcessHandleByName(std::wstring processName)
-{
-	return 0;
-}
-
 // Returns a process id based on the process name eg notepad.exe
 DWORD CInjector::GetProcessIdByName(std::wstring processName)
 {
-	return 0;
+	HANDLE hSnap;
+	DWORD pId = 0;
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	try {
+		// Create a system wide snapshot of all processes
+		hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		if (!hSnap) {
+			throw std::exception("Could not create process snapshot");
+		}
+
+		// Iterate the process list and add the names to our list
+		if (!Process32FirstW(hSnap, &pe32)) {
+			throw std::exception("Enumerating processes failed");
+		}
+
+		do {
+			if (std::wstring(pe32.szExeFile) == processName) {
+				pId = pe32.th32ProcessID;
+				break;
+			}
+		} while (Process32NextW(hSnap, &pe32));
+
+		CloseHandle(hSnap);
+		return pId;
+	}
+	catch (std::exception e) {
+		CloseHandle(hSnap);
+		throw;
+	}
 }
 
 // Strips the leading path and returns only the filename
