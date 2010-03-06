@@ -2,13 +2,11 @@
 #include <windows.h>
 #include "CHook.h"
 
-// Class constructor.
 CHook::CHook( void )
 {
-	
+	// insert code here to hook the original GPA
 }
 
-// Class destructor.
 CHook::~CHook( void )
 {
 
