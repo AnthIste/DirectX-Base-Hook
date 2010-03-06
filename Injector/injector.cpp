@@ -91,6 +91,45 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName)
 	}
 }
 
+// Injects the dll specified by dllPath after creating the target process
+int CInjector::InjectAuto(std::wstring dllPath, std::wstring processPath)
+{
+	STARTUPINFOW si;
+	PROCESS_INFORMATION pi;
+
+	ZeroMemory(&pi, sizeof(pi));
+	ZeroMemory(&si, sizeof(si));
+
+	si.cb = sizeof(si);
+
+	try {
+		// Create the process
+		if (!CreateProcessW(0,
+			const_cast<LPWSTR>(processPath.c_str()),
+			0,
+			0,
+			false,
+			CREATE_SUSPENDED,
+			0,
+			0,
+			&si,
+			&pi)) throw std::exception("Could not create process");
+
+		// Inject the dll (unoptimized, first re-searches the process list)
+		std::wstring processName = StripPath(processPath);
+		int bInjected = Inject(dllPath, processName);
+
+		// Resume
+		ResumeThread(pi.hThread);
+
+		return bInjected;
+	}
+	catch (std::exception e) {
+		TerminateProcess(pi.hProcess, 0);
+		throw;
+	}
+}
+
 // Unloads an injected (not arbitrary) dll from the target process
 int CInjector::Unload(std::wstring dllName, std::wstring processName)
 {
