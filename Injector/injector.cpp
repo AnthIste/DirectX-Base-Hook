@@ -107,6 +107,10 @@ CInjector::ProcessList_t CInjector::GetProcessList()
 // Scans all processes in the system and stores them in a list (by name)
 int CInjector::RefreshProcessList()
 {
+	processNames.clear();
+	processNames.push_back(L"Process1.exe");
+	processNames.push_back(L"Process2.exe");
+
 	return 1;
 }
 
