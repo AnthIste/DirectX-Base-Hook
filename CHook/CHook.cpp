@@ -9,13 +9,13 @@ CHook::CHook( void )
 
 CHook::~CHook( void )
 {
-
+	// Go through dynamic hook list & free all allocated space.
 }
 
 // We hook GetProcAddress, to implement dynamic hooking.
 // This emulates GetProcAddress if the function the foreign
 // process is looking for != a function we want to hook.
-FARPROC WINAPI CHook::c_hGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
+FARPROC WINAPI CHook::m_pfnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
 {
 	DWORD *p_dwFuncs = NULL, pModBase = (DWORD)hModule;
 	const char **p_szNames = NULL;
@@ -59,4 +59,16 @@ FARPROC WINAPI CHook::c_hGetProcAddress( __in HMODULE hModule, __in LPCSTR lpPro
 
 	// We never found the function.
 	return NULL;
+}
+
+bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FARPROC pfnDetour )
+{
+	// If the list is not initialized, here is where we shall do it.
+	if(!this->m_pDynHooks) {
+		if(!(this->m_pDynHooks = (dynh_list *)HeapAlloc(GetProcessHeap(), 0, sizeof(dynh_list))))
+			return false;
+	
+		
+	}
+	return false;
 }
