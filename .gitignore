@@ -1,0 +1,5 @@
+~.gitignore
+LoadLibraryHook/Debug
+LoadLibraryHook/Release
+Injector/Debug
+Injector/Release
