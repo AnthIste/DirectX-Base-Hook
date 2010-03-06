@@ -59,7 +59,7 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 
 				ofn.hwndOwner = hWnd;
 				ofn.lpstrFile = fileName;
-				ofn.lpstrFilter = L"Supported Files (*.dll)\0*.dll\0";
+				ofn.lpstrFilter = L"Supported Files (*.dll)\0*.dll\0All Files (*.*)\0*.*\0";
 				ofn.nMaxCustFilter = 40;
 				ofn.lStructSize = sizeof(ofn);
 				ofn.nMaxFile = MAX_PATH;
@@ -81,7 +81,7 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 
 				ofn.hwndOwner = hWnd;
 				ofn.lpstrFile = fileName;
-				ofn.lpstrFilter = L"Supported Files (*.exe)\0*.dll\0All Files (*.*)\0*.*\0";
+				ofn.lpstrFilter = L"Supported Files (*.exe)\0*.exe\0All Files (*.*)\0*.*\0";
 				ofn.nMaxCustFilter = 40;
 				ofn.lStructSize = sizeof(ofn);
 				ofn.nMaxFile = MAX_PATH;
@@ -117,10 +117,14 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 
 				if (bChecked) {
 					EnableWindow(GetDlgItem(hWnd, IDC_LIST_PROCESSES), 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_UNLOAD), 0);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_REFRESH), 0);
 					EnableWindow(GetDlgItem(hWnd, IDC_BTN_PROCESS), 1);
 					EnableWindow(GetDlgItem(hWnd, IDC_EDIT_PROCESS), 1);
 				} else {
 					EnableWindow(GetDlgItem(hWnd, IDC_LIST_PROCESSES), 1);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_UNLOAD), 1);
+					EnableWindow(GetDlgItem(hWnd, IDC_BTN_REFRESH), 1);
 					EnableWindow(GetDlgItem(hWnd, IDC_BTN_PROCESS), 0);
 					EnableWindow(GetDlgItem(hWnd, IDC_EDIT_PROCESS), 0);
 				}

@@ -2,6 +2,7 @@
 #define INC_INJECTOR
 
 #include <windows.h>
+#include <tlhelp32.h>
 #include <string>
 #include <sstream>
 #include <map>

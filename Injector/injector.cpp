@@ -99,15 +99,36 @@ int CInjector::Unload(std::wstring dllName, std::wstring processName)
 // Scans all processes in the system and stores them in a list (by name)
 int CInjector::RefreshProcessList()
 {
+	// Clear the old list to make space for updated one
 	processNames.clear();
 
-	for (int k = 0; k < 20; k++) {
-		std::wstringstream ss;
-		ss << L"Process" << k << L".exe";
-		processNames.push_back(ss.str().c_str());
-	}
+	HANDLE hSnap;
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(PROCESSENTRY32);
 
-	return 1;
+	try {
+		// Create a system wide snapshot of all processes
+		hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		if (!hSnap) {
+			throw std::exception("Could not create process snapshot");
+		}
+
+		// Iterate the process list and add the names to our list
+		if (!Process32FirstW(hSnap, &pe32)) {
+			throw std::exception("Enumerating processes failed");
+		}
+
+		do {
+			processNames.push_back(pe32.szExeFile);
+		} while (Process32NextW(hSnap, &pe32));
+
+		CloseHandle(hSnap);
+		return 1;
+	}
+	catch (std::exception e) {
+		CloseHandle(hSnap);
+		throw;
+	}
 }
 
 // Returns a string list of all processes since the last refresh
