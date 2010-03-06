@@ -9,4 +9,4 @@ Basic outline of how the hook is to work (at this stage):
 * Unhook on exit
 
 
-And thats it folks
+Testing this shit...
