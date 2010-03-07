@@ -2,6 +2,9 @@
 #include <windows.h>
 #include "CHook.h"
 
+CHook CHook::m_pCHook;
+dynh_list *CHook::m_pDynHooks, *CHook::m_pDynStart;
+
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {

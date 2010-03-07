@@ -162,7 +162,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\hooks.cpp"
+				RelativePath=".\directx9hook.cpp"
 				>
 			</File>
 			<File
@@ -176,7 +176,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\hooks.h"
+				RelativePath=".\directx9hook.h"
 				>
 			</File>
 		</Filter>
