@@ -2,73 +2,95 @@
 #include <windows.h>
 #include "CHook.h"
 
+// Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {
-	// insert code here to hook the original GPA
+	
 }
 
+// Free up the linked list memory.
 CHook::~CHook( void )
 {
-	// Go through dynamic hook list & free all allocated space.
+	dynh_list *walk_list = this->m_pDynStart;
+	while(walk_list) {
+		walk_list = walk_list->next_hook;
+		free(walk_list->s_szfnName);
+		free(walk_list);
+		m_pDynStart = walk_list;
+	}
 }
 
 // We hook GetProcAddress, to implement dynamic hooking.
 // This emulates GetProcAddress if the function the foreign
 // process is looking for != a function we want to hook.
-FARPROC WINAPI CHook::m_pfnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
+FARPROC WINAPI CHook::h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
 {
-	DWORD *p_dwFuncs = NULL, pModBase = (DWORD)hModule;
-	const char **p_szNames = NULL;
+	dynh_list *walk_list = m_pDynStart;
+	while(walk_list) {
+		if(walk_list->s_dwModBase == hModule && !strcmp(walk_list->s_szfnName, lpProcName)) 
+			return walk_list->s_pfnFunc;
+		walk_list = walk_list->next_hook;
+	}
 
-	
-	// Search linked list here for dynamic hooking.
-	// Write this & the linked list next.
-
-
-	// Pointer to the DOS header, and check the signature.
-	PIMAGE_DOS_HEADER pDosHeader = ((PIMAGE_DOS_HEADER)pModBase);
-	if(pDosHeader->e_magic != 0x5A4D) // MZ
+	PIMAGE_DOS_HEADER pDosHeader = ((PIMAGE_DOS_HEADER)(DWORD)hModule);
+	if(pDosHeader->e_magic != 0x5A4D)
 		return NULL;
 
-	// e_lfanew holds a pointer to the NT header. Then check the NT Signature
-	PIMAGE_NT_HEADERS pNtHeaders = ((PIMAGE_NT_HEADERS)(pModBase + pDosHeader->e_lfanew));
-	if(pNtHeaders->Signature != 0x4550) // PE
+	PIMAGE_NT_HEADERS pNtHeaders = ((PIMAGE_NT_HEADERS)((DWORD)hModule + pDosHeader->e_lfanew));
+	if(pNtHeaders->Signature != 0x4550)
 		return NULL;
 
-	// Retrieve the data directory. We use this to get to the export directory.
 	PIMAGE_DATA_DIRECTORY pDataDir = ((PIMAGE_DATA_DIRECTORY)(pNtHeaders->OptionalHeader.DataDirectory + IMAGE_DIRECTORY_ENTRY_EXPORT));
 	if(!pDataDir)
 		return NULL;
 	
-	// Get the address of the export directory.
-	PIMAGE_EXPORT_DIRECTORY pExpDir = ((PIMAGE_EXPORT_DIRECTORY)(pModBase + pDataDir->VirtualAddress));
+	PIMAGE_EXPORT_DIRECTORY pExpDir = ((PIMAGE_EXPORT_DIRECTORY)((DWORD)hModule + pDataDir->VirtualAddress));
 	if(!pExpDir)
 		return NULL;
 
-	p_dwFuncs = ((DWORD *)(pModBase + pExpDir->AddressOfFunctions));	// Array of function addresses.
-	p_szNames = ((const char **)(pModBase + pExpDir->AddressOfNames));	// Array of function name.
+	DWORD *p_dwFuncs		= ((DWORD *)((DWORD)hModule + pExpDir->AddressOfFunctions));
+	const char **p_szNames	= ((const char **)((DWORD)hModule + pExpDir->AddressOfNames));
 	if(!p_dwFuncs || !p_szNames)
 		return NULL;
 
-	// Loop through, if we find the function, return the address.
 	for(DWORD dwIndex = 0; dwIndex < pExpDir->NumberOfFunctions; dwIndex++) {
-		if(!strcmp(((char *)(pModBase + p_szNames[dwIndex])), lpProcName)) {
-			return (FARPROC)(pModBase +	p_dwFuncs[dwIndex]);
+		if(!strcmp(((char *)((DWORD)hModule + p_szNames[dwIndex])), lpProcName)) {
+			return (FARPROC)((DWORD)hModule +	p_dwFuncs[dwIndex]);
 		}
 	}
 
-	// We never found the function.
 	return NULL;
 }
 
+// This is to add a "DynamicHook", using linked lists, which will be put in use when GetProcAddress is called.
+// NOTE: You cannot remove a "DynamicHook", as the program will store your DETOUR address, not a detoured real function,
+// therefore it is your responsibility to call the original function itself.
 bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FARPROC pfnDetour )
 {
-	// If the list is not initialized, here is where we shall do it.
+	if(!lpLibName || !lpFuncName || !IsBadCodePtr(pfnDetour))
+		return false;
+
+	while(this->m_pDynHooks->next_hook)
+		this->m_pDynHooks = this->m_pDynHooks->next_hook;
+
 	if(!this->m_pDynHooks) {
-		if(!(this->m_pDynHooks = (dynh_list *)HeapAlloc(GetProcessHeap(), 0, sizeof(dynh_list))))
+		if(!(this->m_pDynStart = this->m_pDynHooks = (dynh_list *)malloc(sizeof(dynh_list))))
 			return false;
-	
-		
+	} else {
+		if(!(this->m_pDynHooks->next_hook = (dynh_list *)malloc(sizeof(dynh_list)))) 
+			return false;
+		this->m_pDynHooks = this->m_pDynHooks->next_hook;
 	}
-	return false;
+	
+	this->m_pDynHooks->next_hook	= NULL;
+	this->m_pDynHooks->s_dwModBase	= GetModuleHandleA(lpLibName);
+	this->m_pDynHooks->s_pfnFunc	= pfnDetour;
+	this->m_pDynHooks->s_szfnName	= _strdup(lpFuncName);
+
+	if(!this->m_pDynHooks->s_szfnName) {
+		free(this->m_pDynHooks);
+		return false;
+	}
+	
+	return true;
 }
