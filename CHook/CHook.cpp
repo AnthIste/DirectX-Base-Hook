@@ -67,7 +67,7 @@ FARPROC WINAPI CHook::h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpPr
 // therefore it is your responsibility to call the original function itself.
 bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FARPROC pfnDetour )
 {
-	if(!lpLibName || !lpFuncName || !IsBadCodePtr(pfnDetour))
+	if(!lpLibName || !lpFuncName || IsBadCodePtr(pfnDetour))
 		return false;
 
 	while(m_pDynHooks->next_hook)
@@ -82,10 +82,10 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 		m_pDynHooks = m_pDynHooks->next_hook;
 	}
 	
-	m_pDynHooks->next_hook	= NULL;
+	m_pDynHooks->next_hook		= NULL;
 	m_pDynHooks->s_dwModBase	= GetModuleHandleA(lpLibName);
-	m_pDynHooks->s_pfnFunc	= pfnDetour;
-	m_pDynHooks->s_szfnName	= _strdup(lpFuncName);
+	m_pDynHooks->s_pfnFunc		= pfnDetour;
+	m_pDynHooks->s_szfnName		= _strdup(lpFuncName);
 
 	if(!m_pDynHooks->s_szfnName) {
 		free(m_pDynHooks);
@@ -95,35 +95,31 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 	return true;
 }
 
-unsigned long* CHook::GetVtableAddress(void* pObject)
+// Hook a function, multiple methods, thread safe.
+FARPROC CHook::NewDetour( __in LPCSTR lpszModName, __in LPCSTR lpszFuncName, __in FARPROC pfnNewFunc, __in int nDetourMethod )
 {
-	// Returns a pointer to an objects vtable ie. the vtable's address
-	
-	return reinterpret_cast<unsigned long*>(*static_cast<unsigned long*>(pObject));
+	return NULL;
 }
 
-unsigned long* CHook::DetourWithVtable(void* pObject, unsigned int offset, unsigned long* hookProc)
+// Hook virtual table function, thread safe.
+FARPROC CHook::NewDetour( __in void *pObject, __in unsigned int nFuncOffset, __in FARPROC pfnNewFunc ) 
 {
-	// MUST be used else VirtualProtect will fail
-	DWORD dwOldProtect;
+	DWORD dwOldProtect, *dwvTableAddr;
+	FARPROC pfnOrigProc;
 
-	// Get the address in the vtable that holds the address of the function we want to hook
-	unsigned long* vtableAddress = GetVtableAddress(pObject);
-	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(vtableAddress) + offset);
+	if(!pObject || !nFuncOffset || IsBadCodePtr(pfnOrigProc))
+		return NULL;
 
-	// Chances are the vtable is read/write protected, so change that
-	if (!VirtualProtect(lpBaseAddress, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
-		return 0;
-	}
+	dwvTableAddr = (DWORD *)(*(DWORD *)(pObject));
+	void *lpBaseAddress = (void *)((DWORD)(dwvTableAddr) + nFuncOffset);
 
-	// Read the original function address now that protection is removed
-	unsigned long* origProc = reinterpret_cast<unsigned long*>(vtableAddress[offset]);
+	if (!VirtualProtect(lpBaseAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
+		return NULL;
 
-	// Replace it with our hook address
-	vtableAddress[offset] = reinterpret_cast<unsigned long>(hookProc);
+	InterlockedExchange((LPLONG)((DWORD)pfnOrigProc), (LONG)((DWORD *)dwvTableAddr[nFuncOffset]));
+	InterlockedExchange((LPLONG)((DWORD *)dwvTableAddr[nFuncOffset]), (LONG)((DWORD)pfnNewFunc));
 
-	// Restore protection
-	VirtualProtect(lpBaseAddress, 4, dwOldProtect, &dwOldProtect);
+	VirtualProtect(lpBaseAddress, sizeof(DWORD), dwOldProtect, &dwOldProtect);
 
-	return origProc;
+	return pfnOrigProc;
 }
