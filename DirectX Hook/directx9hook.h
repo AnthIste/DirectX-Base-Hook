@@ -8,6 +8,7 @@
 #include <map>
 #include <algorithm>
 #include "../CHook/CHook.h"
+#include "../Injector/System.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
@@ -39,6 +40,8 @@ class CDirectX9Hook {
 		static void InitiateDetourProcedure();
 		static void ScheduleDetour(Detour_t detour);
 
+		static HRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return TRUE; }
+
 		// Different hook methods
 		static void HookNormal();
 		static void HookDynamic();
@@ -49,8 +52,8 @@ class CDirectX9Hook {
 		typedef IDirect3D9* (APIENTRY *Direct3DCreate9_t)(UINT);
 		static IDirect3D9* APIENTRY hook_Direct3DCreate9(UINT sdkVersion);
 
-		typedef HRESULT (APIENTRY *CreateDevice_t)(IDirect3DDevice9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
-		static HRESULT APIENTRY hook_CreateDevice(IDirect3DDevice9* pDevice, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface);
+		typedef HRESULT (APIENTRY *CreateDevice_t)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+		static HRESULT APIENTRY hook_CreateDevice(IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface);
 
 		// static members
 		static addr_t pVtable;

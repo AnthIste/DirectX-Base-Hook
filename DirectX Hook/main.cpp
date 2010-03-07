@@ -24,9 +24,9 @@ BOOL WINAPI DllMain(HINSTANCE hInstanceDll, DWORD dwReason, LPVOID reserved)
 	switch (dwReason) {
 		case DLL_PROCESS_ATTACH:
 			{
-				std::wstringstream ss;
+				/*std::wstringstream ss;
 				ss << L"GetModuleHandle(d3d9.dll) = " << (void*)GetModuleHandleW(L"d3d9.dll");
-				MessageBoxW(0, ss.str().c_str(), L"Test", MB_ICONINFORMATION);
+				//MessageBoxW(0, ss.str().c_str(), L"Test", MB_ICONINFORMATION);*/
 				CDirectX9Hook::DetourDirectX(35, (void*)hook_EndScene, (void*)&orig_EndScene);
 				//CDirectX9Hook::DetourDirectX(dxoffsets::reset, (void*)hook_Reset, (void*)&orig_Reset);
 			}

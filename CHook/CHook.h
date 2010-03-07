@@ -21,7 +21,7 @@ class CHook {
 
 		// Merged with my hook code to keep all hooking stuff together
 		static unsigned long* GetVtableAddress(void* pObject);
-		static unsigned long* DetourWithVtable(void* pObject, unsigned int offset, unsigned long* hookProc);
+		static unsigned long* DetourWithVtable(unsigned long* pVtable, unsigned int offset, unsigned long* hookProc);
 
 	private:
 		static FARPROC WINAPI h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName );

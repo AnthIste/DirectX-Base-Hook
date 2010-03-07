@@ -101,18 +101,24 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 unsigned long* CHook::GetVtableAddress(void* pObject)
 {
 	// Returns a pointer to an objects vtable ie. the vtable's address
+	if (!pObject) {
+		return 0;
+	}
 	
-	return reinterpret_cast<unsigned long*>(*static_cast<unsigned long*>(pObject));
+	return *reinterpret_cast<unsigned long**>(pObject);
 }
 
-unsigned long* CHook::DetourWithVtable(void* pObject, unsigned int offset, unsigned long* hookProc)
+unsigned long* CHook::DetourWithVtable(unsigned long* pVtable, unsigned int offset, unsigned long* hookProc)
 {
+	if (!pVtable || !hookProc) {
+		return 0;
+	}
+
 	// MUST be used else VirtualProtect will fail
 	DWORD dwOldProtect;
 
 	// Get the address in the vtable that holds the address of the function we want to hook
-	unsigned long* vtableAddress = GetVtableAddress(pObject);
-	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(vtableAddress) + offset);
+	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(pVtable) + offset);
 
 	// Chances are the vtable is read/write protected, so change that
 	if (!VirtualProtect(lpBaseAddress, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
@@ -120,10 +126,10 @@ unsigned long* CHook::DetourWithVtable(void* pObject, unsigned int offset, unsig
 	}
 
 	// Read the original function address now that protection is removed
-	unsigned long* origProc = reinterpret_cast<unsigned long*>(vtableAddress[offset]);
+	unsigned long* origProc = reinterpret_cast<unsigned long*>(pVtable[offset]);
 
 	// Replace it with our hook address
-	vtableAddress[offset] = reinterpret_cast<unsigned long>(hookProc);
+	pVtable[offset] = reinterpret_cast<unsigned long>(hookProc);
 
 	// Restore protection
 	VirtualProtect(lpBaseAddress, 4, dwOldProtect, &dwOldProtect);
