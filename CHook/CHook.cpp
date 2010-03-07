@@ -11,7 +11,7 @@ CHook::CHook( void )
 // Free up the linked list memory.
 CHook::~CHook( void )
 {
-	dynh_list *walk_list = this->m_pDynStart;
+	dynh_list *walk_list = m_pDynStart;
 	while(walk_list) {
 		walk_list = walk_list->next_hook;
 		free(walk_list->s_szfnName);
@@ -70,27 +70,60 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 	if(!lpLibName || !lpFuncName || !IsBadCodePtr(pfnDetour))
 		return false;
 
-	while(this->m_pDynHooks->next_hook)
-		this->m_pDynHooks = this->m_pDynHooks->next_hook;
+	while(m_pDynHooks->next_hook)
+		m_pDynHooks = m_pDynHooks->next_hook;
 
-	if(!this->m_pDynHooks) {
-		if(!(this->m_pDynStart = this->m_pDynHooks = (dynh_list *)malloc(sizeof(dynh_list))))
+	if(!m_pDynHooks) {
+		if(!(m_pDynStart = m_pDynHooks = (dynh_list *)malloc(sizeof(dynh_list))))
 			return false;
 	} else {
-		if(!(this->m_pDynHooks->next_hook = (dynh_list *)malloc(sizeof(dynh_list)))) 
+		if(!(m_pDynHooks->next_hook = (dynh_list *)malloc(sizeof(dynh_list)))) 
 			return false;
-		this->m_pDynHooks = this->m_pDynHooks->next_hook;
+		m_pDynHooks = m_pDynHooks->next_hook;
 	}
 	
-	this->m_pDynHooks->next_hook	= NULL;
-	this->m_pDynHooks->s_dwModBase	= GetModuleHandleA(lpLibName);
-	this->m_pDynHooks->s_pfnFunc	= pfnDetour;
-	this->m_pDynHooks->s_szfnName	= _strdup(lpFuncName);
+	m_pDynHooks->next_hook	= NULL;
+	m_pDynHooks->s_dwModBase	= GetModuleHandleA(lpLibName);
+	m_pDynHooks->s_pfnFunc	= pfnDetour;
+	m_pDynHooks->s_szfnName	= _strdup(lpFuncName);
 
-	if(!this->m_pDynHooks->s_szfnName) {
-		free(this->m_pDynHooks);
+	if(!m_pDynHooks->s_szfnName) {
+		free(m_pDynHooks);
 		return false;
 	}
 	
 	return true;
+}
+
+unsigned long* CHook::GetVtableAddress(void* pObject)
+{
+	// Returns a pointer to an objects vtable ie. the vtable's address
+	
+	return reinterpret_cast<unsigned long*>(*static_cast<unsigned long*>(pObject));
+}
+
+unsigned long* CHook::DetourWithVtable(void* pObject, unsigned int offset, unsigned long* hookProc)
+{
+	// MUST be used else VirtualProtect will fail
+	DWORD dwOldProtect;
+
+	// Get the address in the vtable that holds the address of the function we want to hook
+	unsigned long* vtableAddress = GetVtableAddress(pObject);
+	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(vtableAddress) + offset);
+
+	// Chances are the vtable is read/write protected, so change that
+	if (!VirtualProtect(lpBaseAddress, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
+		return 0;
+	}
+
+	// Read the original function address now that protection is removed
+	unsigned long* origProc = reinterpret_cast<unsigned long*>(vtableAddress[offset]);
+
+	// Replace it with our hook address
+	vtableAddress[offset] = reinterpret_cast<unsigned long>(hookProc);
+
+	// Restore protection
+	VirtualProtect(lpBaseAddress, 4, dwOldProtect, &dwOldProtect);
+
+	return origProc;
 }
