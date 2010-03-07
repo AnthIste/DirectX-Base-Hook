@@ -10,15 +10,13 @@ typedef struct _dynh_list {
 
 class CHook {
 	private:
-		static FARPROC WINAPI m_pfnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName );
-
+		static FARPROC WINAPI h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName );
 		static CHook m_pCHook;
 		static dynh_list *m_pDynHooks, *m_pDynStart;
 
 	public:
 		CHook( void );
 		~CHook( void );
-
 		bool AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FARPROC pfnDetour );
 };
 

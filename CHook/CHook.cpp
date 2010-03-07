@@ -5,7 +5,7 @@
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {
-
+	
 }
 
 // Free up the linked list memory.
@@ -23,7 +23,7 @@ CHook::~CHook( void )
 // We hook GetProcAddress, to implement dynamic hooking.
 // This emulates GetProcAddress if the function the foreign
 // process is looking for != a function we want to hook.
-FARPROC WINAPI CHook::m_pfnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
+FARPROC WINAPI CHook::h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
 {
 	dynh_list *walk_list = m_pDynStart;
 	while(walk_list) {
