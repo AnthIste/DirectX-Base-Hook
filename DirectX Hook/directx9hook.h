@@ -15,7 +15,6 @@
 #pragma comment(lib, "../Release/CHook.lib")
 
 class CDirectX9Hook {
-	// Types used in the hook
 	typedef unsigned long* addr_t;							// describes an address / 4-byte ptr
 
 	struct Detour_t {
@@ -44,11 +43,22 @@ class CDirectX9Hook {
 		static void HookNormal();
 		static void HookDynamic();
 		static void HookRuntime();
+		static void ApplyPendingHooks();
+
+		// Detours used by the hook
+		typedef IDirect3D9* (APIENTRY *Direct3DCreate9_t)(UINT);
+		static IDirect3D9* APIENTRY hook_Direct3DCreate9(UINT sdkVersion);
+
+		typedef HRESULT (APIENTRY *CreateDevice_t)(IDirect3DDevice9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+		static HRESULT APIENTRY hook_CreateDevice(IDirect3DDevice9* pDevice, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface);
 
 		// static members
 		static addr_t pVtable;
 		static IDirect3DDevice9* pDevice;
 		static DetourMap_t detours;
+
+		static Direct3DCreate9_t orig_Direct3DCreate9;
+		static CreateDevice_t orig_CreateDevice;
 };
 
 #endif
