@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include "../CHook/CHook.h"
 
-#pragma comment(lib, "C:\\DirectX Project\\Release\\CHook.lib")
+// Rather use relative paths
+#pragma comment(lib, "../Release/CHook.lib")
 
 int WINAPI MyMessageBoxA(__in_opt HWND hWnd, __in_opt LPCSTR lpText, __in_opt LPCSTR lpCaption, __in UINT uType)
 {
