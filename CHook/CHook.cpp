@@ -5,7 +5,8 @@
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {
-	
+	if(!NewDetour((FARPROC)GetProcAddress, (FARPROC)h_fnGetProcAddress))
+		MessageBoxA(0, "Detour failed!", "Fail", MB_ICONASTERISK);
 }
 
 // Free up the linked list memory.
@@ -95,9 +96,29 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 	return true;
 }
 
-// Hook a function, multiple methods, thread safe.
-FARPROC CHook::NewDetour( __in LPCSTR lpszModName, __in LPCSTR lpszFuncName, __in FARPROC pfnNewFunc, __in int nDetourMethod )
+// Hook a function, thread safe.
+// Credits to Napalm!
+FARPROC CHook::NewDetour( __in FARPROC pfnOldFunc, __in FARPROC pfnNewFunc )
 {
+	if(IsBadCodePtr(pfnNewFunc) || IsBadCodePtr(pfnOldFunc))
+		return NULL;
+
+	DWORD dwOldProtect;
+	LPBYTE lpPatchFunc = (LPBYTE)pfnOldFunc;
+
+	if(!memcmp(lpPatchFunc, "\x8B\xFF", 2)) {
+		lpPatchFunc -= 5;
+		if(!memcmp(lpPatchFunc, "\x90\x90\x90\x90\x90", 5) || !memcmp(lpPatchFunc, "\xCC\xCC\xCC\xCC\xCC", 5)) {
+			if(VirtualProtect(lpPatchFunc, 7, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
+				*(LPDWORD)(lpPatchFunc + 1) = ((LONG)pfnNewFunc - (LONG)pfnOldFunc);
+				*(LPDWORD)lpPatchFunc = 0xE9;
+				InterlockedExchange((LPLONG)pfnOldFunc, (LONG)((*(LPDWORD)pfnOldFunc & 0xFFFF0000) | 0xF9EB));
+				VirtualProtect(lpPatchFunc, 7, dwOldProtect, NULL);
+				return (FARPROC)((DWORD)pfnOldFunc + 2);;
+			}
+		}
+	}
+
 	return NULL;
 }
 
@@ -105,9 +126,9 @@ FARPROC CHook::NewDetour( __in LPCSTR lpszModName, __in LPCSTR lpszFuncName, __i
 FARPROC CHook::NewDetour( __in void *pObject, __in unsigned int nFuncOffset, __in FARPROC pfnNewFunc ) 
 {
 	DWORD dwOldProtect, *dwvTableAddr;
-	FARPROC pfnOrigProc;
+	FARPROC pfnOrigProc = 0;
 
-	if(!pObject || !nFuncOffset || IsBadCodePtr(pfnOrigProc))
+	if(!pObject || !nFuncOffset || IsBadCodePtr(pfnNewFunc))
 		return NULL;
 
 	dwvTableAddr = (DWORD *)(*(DWORD *)(pObject));
@@ -119,7 +140,7 @@ FARPROC CHook::NewDetour( __in void *pObject, __in unsigned int nFuncOffset, __i
 	InterlockedExchange((LPLONG)((DWORD)pfnOrigProc), (LONG)((DWORD *)dwvTableAddr[nFuncOffset]));
 	InterlockedExchange((LPLONG)((DWORD *)dwvTableAddr[nFuncOffset]), (LONG)((DWORD)pfnNewFunc));
 
-	VirtualProtect(lpBaseAddress, sizeof(DWORD), dwOldProtect, &dwOldProtect);
+	VirtualProtect(lpBaseAddress, sizeof(DWORD), dwOldProtect, NULL);
 
 	return pfnOrigProc;
 }

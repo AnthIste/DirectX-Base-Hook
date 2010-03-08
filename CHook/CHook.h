@@ -14,7 +14,7 @@ class CHook {
 		~CHook( void );
 
 		static bool		AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FARPROC pfnDetour );
-		static FARPROC	NewDetour( __in LPCSTR lpszModName, __in LPCSTR lpszFuncName, __in FARPROC pfnNewFunc, __in int nDetourMethod );
+		static FARPROC	NewDetour( __in FARPROC pfnOldFunc, __in FARPROC pfnNewFunc );
 		static FARPROC	NewDetour( __in void *pObject, __in unsigned int nFuncOffset, __in FARPROC pfnNewFunc );
 
 	private:
