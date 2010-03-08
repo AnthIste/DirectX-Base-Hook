@@ -98,6 +98,7 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 
 // Hook a function, thread safe.
 // Credits to Napalm!
+// Will re-write this in due time.
 FARPROC CHook::NewDetour( __in FARPROC pfnOldFunc, __in FARPROC pfnNewFunc )
 {
 	if(IsBadCodePtr(pfnNewFunc) || IsBadCodePtr(pfnOldFunc))
