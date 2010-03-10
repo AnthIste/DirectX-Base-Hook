@@ -34,7 +34,7 @@ void CDirectX9Hook::DetourRemove(unsigned int offset)
 	Detour_t detour = detours[offset];
 
 	void* origProc = reinterpret_cast<void*>(*(detour.pOrig));
-	CHook::DetourWithVtable(pVtable, offset, (addr_t)origProc);
+	CHook::NewDetour((DWORD*)pVtable, offset, (FARPROC)origProc);
 }
 
 void CDirectX9Hook::InitiateDetourProcedure()
@@ -157,7 +157,7 @@ void CDirectX9Hook::ApplyPendingHooks()
 	for (i = detours.begin(); i != detours.end(); i++) {
 		MessageBoxW(0, L"Hooking", L"DX Hook", MB_ICONINFORMATION);
 		Detour_t detour = (*i).second;
-		*(addr_t*)detour.pOrig = (addr_t)CHook::DetourWithVtable(pVtable, detour.offset, detour.pDetour);
+		*(addr_t*)detour.pOrig = (addr_t)CHook::NewDetour((DWORD*)pVtable, detour.offset, (FARPROC)detour.pDetour);
 	}
 
 	detours.clear();
@@ -172,7 +172,7 @@ IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
 	static bool hooked = false;
 	if (!hooked) {
 		addr_t d3dVtable = CHook::GetVtableAddress((void*)orig);
-		orig_CreateDevice = (CreateDevice_t)CHook::DetourWithVtable(d3dVtable, 15, (addr_t)hook_CreateDevice);
+		orig_CreateDevice = (CreateDevice_t)CHook::NewDetour((DWORD*)d3dVtable, 15, (FARPROC)hook_CreateDevice);
 		hooked = true;
 	}
 
