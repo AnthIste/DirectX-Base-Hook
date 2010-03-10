@@ -3,6 +3,7 @@
 #include "CHook.h"
 
 // You need to define static class variables in _A_ source file somewhere
+
 CHook CHook::m_pCHook;
 dynh_list *CHook::m_pDynHooks, *CHook::m_pDynStart;
 
@@ -136,14 +137,42 @@ FARPROC CHook::NewDetour( __in void *pObject, __in unsigned int nFuncOffset, __i
 	if(!pObject || !nFuncOffset || IsBadCodePtr(pfnNewFunc))
 		return NULL;
 
+	// Returns a pointer to an objects vtable ie. the vtable's address
+	if (!pObject) {
+		return 0;
+	}
+	
+	return *reinterpret_cast<unsigned long**>(pObject);
+}
+
+unsigned long* CHook::DetourWithVtable(unsigned long* pVtable, unsigned int offset, unsigned long* hookProc)
+{
+	if (!pVtable || !hookProc) {
+		return 0;
+	}
+
+	// MUST be used else VirtualProtect will fail
+	DWORD dwOldProtect;
+
+	// Get the address in the vtable that holds the address of the function we want to hook
+	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(pVtable) + offset);
+
+
 	dwvTableAddr = (DWORD *)(*(DWORD *)(pObject));
 	void *lpBaseAddress = (void *)((DWORD)(dwvTableAddr) + nFuncOffset);
+
 
 	if (!VirtualProtect(lpBaseAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
 		return NULL;
 
 	InterlockedExchange((LPLONG)((DWORD)pfnOrigProc), (LONG)((DWORD *)dwvTableAddr[nFuncOffset]));
 	InterlockedExchange((LPLONG)((DWORD *)dwvTableAddr[nFuncOffset]), (LONG)((DWORD)pfnNewFunc));
+
+	// Read the original function address now that protection is removed
+	unsigned long* origProc = reinterpret_cast<unsigned long*>(pVtable[offset]);
+
+	// Replace it with our hook address
+	pVtable[offset] = reinterpret_cast<unsigned long>(hookProc);
 
 	VirtualProtect(lpBaseAddress, sizeof(DWORD), dwOldProtect, NULL);
 
