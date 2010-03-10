@@ -1,62 +1,24 @@
-// Small LoadLibraryA hook by illuz1oN
-// Log all dynamically loaded libraries
-// inside a foreign process.
-
-#define _WINNT_VER 0x0501
 #include <windows.h>
-#include <detours.h>
-#include <stdio.h>
-#include <time.h>
+#include <d3d9.h>
+#include <d3dx9.h>
+//#include "directx9hook.h"
 
-// Since we working in Visual Studio
-#pragma comment(lib, "detours.lib")
-#pragma warning(disable : 4996)
+typedef FARPROC (APIENTRY *EndScene_t)(IDirect3DDevice9* pDevice);
+EndScene_t orig_EndScene;
 
-typedef HMODULE (WINAPI *t_LoadLibrary)(LPCSTR);
-t_LoadLibrary g_pfnLoadLibrary = 0;
-
-VOID __cdecl AppendLog(LPCSTR lpFile, const char *lpText, ...)
+FARPROC APIENTRY hook_EndScene(IDirect3DDevice9* pDevice)
 {
-	struct tm * current_tm;
-	time_t current_time;
-
-	time(&current_time);
-	current_tm = localtime(&current_time);
-	
-	char *pBuffer = (char *)malloc(strlen(lpText) + 64);
-	if(!pBuffer)
-		return;
-	sprintf(pBuffer, "[%02d:%02d:%02d] ", current_tm->tm_hour, current_tm->tm_min, current_tm->tm_sec);
-
-	va_list vList;
-	va_start(vList, lpText);
-	_vsnprintf((pBuffer + strlen(pBuffer)), (sizeof(pBuffer) - strlen(pBuffer)), lpText, vList);
-	va_end(vList);
-
-	FILE *fp = NULL;
-	if ((fp = fopen(lpFile, "a")) != NULL) {
-		fprintf (fp, "%s\n", pBuffer);
-		fclose (fp);
-	}
-
-	free(pBuffer);
+	return orig_EndScene(pDevice);
 }
 
-HMODULE WINAPI h_LoadLibrary(LPCSTR lpLibName)
+BOOL WINAPI DllMain(HANDLE hInstance, DWORD reason, LPVOID lpReserved)
 {
-	//AppendLog("C:\\LoadLibraryHook.log", "Loaded: %s", lpLibName);
-	return g_pfnLoadLibrary(lpLibName);
-}
-
-BOOL WINAPI DllMain(_In_ HANDLE _HDllHandle, _In_ DWORD _Reason, _In_opt_ LPVOID _Reserved)
-{
-	if(_Reason == DLL_PROCESS_ATTACH) {
-		AppendLog("C:\\LoadLibraryHook.log", "Injection Successful.");
-		g_pfnLoadLibrary = (t_LoadLibrary)DetourFunction((LPBYTE)LoadLibraryA, (LPBYTE)h_LoadLibrary);
-		AppendLog("C:\\LoadLibraryHook.log", "LoadLibraryA 0x%X -> 0x%X", (DWORD)LoadLibraryA, (DWORD)h_LoadLibrary);
+	switch (reason) {
+		case DLL_PROCESS_ATTACH:
+			MessageBoxA(0, "Dll Injected!", "Dll", MB_ICONINFORMATION);
+			//CDirectX9Hook::DetourDirectX(35, (void*)hook_EndScene, (void*)&orig_EndScene);
+			break;
 	}
-	if(_Reason == DLL_PROCESS_DETACH) 
-		AppendLog("C:\\LoadLibraryHook.log", "Finished logging.");
 
 	return TRUE;
 }

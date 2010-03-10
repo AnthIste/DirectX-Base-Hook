@@ -130,13 +130,13 @@ FARPROC CHook::NewDetour( __in FARPROC pfnOldFunc, __in FARPROC pfnNewFunc )
 // Hook virtual table function, thread safe.
 FARPROC CHook::NewDetour( __in DWORD *pVtable, __in unsigned int nFuncOffset, __in FARPROC pfnNewFunc ) 
 {
-	DWORD dwOldProtect, *dwvTableAddr;
+	DWORD dwOldProtect;
 	FARPROC pfnOrigProc = 0;
  
 	if(!pVtable || !nFuncOffset || IsBadCodePtr(pfnNewFunc))
 		return NULL;
  
-	void *lpBaseAddress = (void *)((DWORD)(dwvTableAddr) + nFuncOffset);
+	void *lpBaseAddress = (void *)((DWORD)(pVtable) + nFuncOffset);
  
 	if (!VirtualProtect(lpBaseAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
 		return NULL;
