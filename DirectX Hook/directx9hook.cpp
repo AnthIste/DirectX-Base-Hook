@@ -22,7 +22,11 @@ void CDirectX9Hook::DetourDirectX(unsigned int offset, void *pDetour, void* pOri
 	Detour_t detour = {reinterpret_cast<addr_t>(pDetour), reinterpret_cast<addr_t>(pOrig), offset};
 	ScheduleDetour(detour);
 
-	InitiateDetourProcedure();
+	if (!pVtable) {
+		InitiateDetourProcedure();
+	} else {
+		ApplyPendingHooks();
+	}
 }
 
 void CDirectX9Hook::DetourRemove(unsigned int offset)
@@ -181,11 +185,9 @@ HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter,
 
 	HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-	CDirectX9Hook::pDevice = *ppReturnedDeviceInterface;
-
-	// Hook everything
-	//pVtable = CHook::GetVtableAddress((void*)pDevice);
-	//ApplyPendingHooks();
+	pDevice = *ppReturnedDeviceInterface;
+	pVtable = CHook::GetVtableAddress((void*)pDevice);
+	ApplyPendingHooks();
 
 	return result;
 }

@@ -12,4 +12,3 @@
 #define IDC_LIST_PROCESSES                      1012
 #define IDC_BTN_PROCESS                         1014
 #define IDC_CBX_AUTOINJECT                      1015
-
