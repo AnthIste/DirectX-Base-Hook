@@ -2,6 +2,10 @@
 #include <windows.h>
 #include "CHook.h"
 
+// You need to define static class variables in _A_ source file somewhere
+CHook CHook::m_pCHook;
+dynh_list *CHook::m_pDynHooks, *CHook::m_pDynStart;
+
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {

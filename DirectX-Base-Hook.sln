@@ -1,13 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+# Visual C++ Express 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CHook", "CHook\CHook.vcproj", "{C5667348-C72E-40B3-B5BA-33B962B06C7E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectX Hook", "DirectX Hook\DirectX Hook.vcproj", "{51624ACB-8CC7-4847-8598-E8C68E3EFEAD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C5667348-C72E-40B3-B5BA-33B962B06C7E} = {C5667348-C72E-40B3-B5BA-33B962B06C7E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Injector", "Injector\Injector.vcproj", "{86D2292E-4283-4456-A328-161B0F054484}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test Program", "Test Program\Test Program.vcproj", "{99D2C990-61F7-48A0-93A1-7ACA4A1D75E9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C5667348-C72E-40B3-B5BA-33B962B06C7E} = {C5667348-C72E-40B3-B5BA-33B962B06C7E}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -14,7 +14,7 @@ int WINAPI MyMessageBoxA(__in_opt HWND hWnd, __in_opt LPCSTR lpText, __in_opt LP
 
 int __stdcall WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
-	//CHook cHook;
+	CHook cHook;
 	//cHook.AddDynamicHook("User32.dll", "MessageBoxA", (FARPROC)MyMessageBoxA);
 	MessageBoxA(0, "test", "test", 0);
 	return 0;
