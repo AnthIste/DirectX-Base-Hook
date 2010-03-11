@@ -11,12 +11,12 @@ FARPROC APIENTRY hook_EndScene(IDirect3DDevice9* pDevice)
 	return orig_EndScene(pDevice);
 }
 
-BOOL CALLBACK DllMain(HANDLE hInstance, DWORD reason, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 {
 	switch (reason) {
 		case DLL_PROCESS_ATTACH:
 			MessageBoxA(0, "Dll Injected!", "BLEH!!!", MB_ICONINFORMATION);
-			//CDirectX9Hook::DetourDirectX(35, (void*)hook_EndScene, (void*)&orig_EndScene);
+			CDirectX9Hook::DetourDirectX(35, (void*)hook_EndScene, (void*)&orig_EndScene);
 			break;
 	}
 

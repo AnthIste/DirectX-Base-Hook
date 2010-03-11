@@ -9,8 +9,8 @@ dynh_list *CHook::m_pDynHooks, *CHook::m_pDynStart;
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {
-	if(!NewDetour((FARPROC)GetProcAddress, (FARPROC)h_fnGetProcAddress))
-		MessageBoxA(0, "Detour failed!", "Fail", MB_ICONASTERISK);
+	//if(!NewDetour((FARPROC)GetProcAddress, (FARPROC)h_fnGetProcAddress))
+	//	MessageBoxA(0, "Detour failed!", "Fail", MB_ICONASTERISK);
 }
  
 // Free up the linked list memory.

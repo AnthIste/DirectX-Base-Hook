@@ -37,7 +37,7 @@ class CDirectX9Hook {
 		CDirectX9Hook() {}
 		~CDirectX9Hook() {}
 
-		static void InitiateDetourProcedure();
+		static void LocateDeviceVtable();
 		static void ScheduleDetour(Detour_t detour);
 
 		static HRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return TRUE; }

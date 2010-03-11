@@ -17,13 +17,13 @@ CDirectX9Hook& CDirectX9Hook::GetInstance()
 
 void CDirectX9Hook::DetourDirectX(unsigned int offset, void *pDetour, void* pOrig)
 {
-	//MessageBoxW(0, L"Received a detour request", L"DX Hook", MB_ICONINFORMATION);
+	MessageBoxW(0, L"Received a detour request", L"DX Hook", MB_ICONINFORMATION);
 
 	Detour_t detour = {reinterpret_cast<addr_t>(pDetour), reinterpret_cast<addr_t>(pOrig), offset};
 	ScheduleDetour(detour);
 
 	if (!pVtable) {
-		InitiateDetourProcedure();
+		LocateDeviceVtable();
 	} else {
 		ApplyPendingHooks();
 	}
@@ -37,23 +37,17 @@ void CDirectX9Hook::DetourRemove(unsigned int offset)
 	CHook::NewDetour((DWORD*)pVtable, offset, (FARPROC)origProc);
 }
 
-void CDirectX9Hook::InitiateDetourProcedure()
+void CDirectX9Hook::LocateDeviceVtable()
 {
-	//MessageBoxW(0, L"Initiating detour procedure", L"DX Hook", MB_ICONINFORMATION);
-
-	static bool complete = false;
-	if (complete) {
-		//MessageBoxW(0, L"Detours have already been initiated", L"DX Hook", MB_ICONINFORMATION);
-
-		ApplyPendingHooks();
-		return;
-	}
+	MessageBoxW(0, L"Locating vtable for hooking", L"DX Hook", MB_ICONINFORMATION);
+	
 	// see readme.txt
-
+	if (GetModuleHandle("d3d9.dll")) {
 		HookNormal();
 		HookRuntime();
-
-	complete = true;
+	} else {
+		// Dynamic hook
+	}
 }
 
 void CDirectX9Hook::ScheduleDetour(Detour_t detour)
@@ -75,6 +69,8 @@ void CDirectX9Hook::HookDynamic()
 
 void CDirectX9Hook::HookRuntime()
 {
+	return;
+
 	MessageBoxW(0, L"Attempting a runtime DirectX hook...", L"DX Hook", MB_ICONINFORMATION);
 	
 	WNDCLASSEXW wc;
@@ -165,7 +161,7 @@ void CDirectX9Hook::ApplyPendingHooks()
 
 IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
 {
-	MessageBoxW(0, L"Hooked Direct3DCreate9", L"DX Hook", MB_ICONINFORMATION);
+	MessageBoxW(0, L"Inside hooked Direct3DCreate9", L"DX Hook", MB_ICONINFORMATION);
 
 	IDirect3D9* orig = orig_Direct3DCreate9(sdkVersion);
 
@@ -181,7 +177,7 @@ IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
 
 HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface)
 {
-	MessageBoxW(0, L"Detoured CreateDevice", L"DX Hook", MB_ICONINFORMATION);
+	MessageBoxW(0, L"Inside detoured CreateDevice", L"DX Hook", MB_ICONINFORMATION);
 
 	HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
