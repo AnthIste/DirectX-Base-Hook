@@ -57,7 +57,6 @@ class CDirectX9Hook {
 
 		// static members
 		static addr_t pVtable;
-		static IDirect3DDevice9* pDevice;
 		static DetourMap_t detours;
 
 		static Direct3DCreate9_t orig_Direct3DCreate9;
