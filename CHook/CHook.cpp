@@ -130,7 +130,7 @@ FARPROC CHook::NewDetour( __in FARPROC pfnOldFunc, __in FARPROC pfnNewFunc )
 // Hook virtual table function, thread safe.
 FARPROC CHook::NewDetour( __in DWORD *pVtable, __in unsigned int nFuncOffset, __in FARPROC pfnNewFunc ) 
 {
-	DWORD dwOldProtect;
+	/*DWORD dwOldProtect;
 	FARPROC pfnOrigProc = 0;
  
 	if(!pVtable || !nFuncOffset || IsBadCodePtr(pfnNewFunc))
@@ -145,8 +145,29 @@ FARPROC CHook::NewDetour( __in DWORD *pVtable, __in unsigned int nFuncOffset, __
 	InterlockedExchange((LPLONG)((DWORD *)pVtable[nFuncOffset]), (LONG)((DWORD)pfnNewFunc));
  
 	VirtualProtect(lpBaseAddress, sizeof(DWORD), dwOldProtect, NULL);
+
+	return pfnOrigProc;*/
+
+	// MUST be used else VirtualProtect will fail
+	DWORD dwOldProtect;
+
+	void* lpBaseAddress = reinterpret_cast<void*>(reinterpret_cast<unsigned long>(pVtable) + nFuncOffset);
+
+	// Chances are the vtable is read/write protected, so change that
+	if (!VirtualProtect(lpBaseAddress, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
+		return 0;
+	}
+
+	// Read the original function address now that protection is removed
+	unsigned long* origProc = reinterpret_cast<unsigned long*>(pVtable[nFuncOffset]);
+
+	// Replace it with our hook address
+	pVtable[nFuncOffset] = reinterpret_cast<unsigned long>(pfnNewFunc);
+
+	// Restore protection
+	VirtualProtect(lpBaseAddress, 4, dwOldProtect, &dwOldProtect);
  
-	return pfnOrigProc;
+	return (FARPROC)origProc;
 }
 
 DWORD* CHook::GetVtableAddress(void* pObject)
