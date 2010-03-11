@@ -67,8 +67,8 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName, DWORD pId)
 		}
 
 		// Wait for the thread return code (HMODULE of loaded module)
-		WaitForSingleObject(hThread, INFINITE);
-		GetExitCodeThread(hThread, (DWORD*)&hModule);
+		//WaitForSingleObject(hThread, INFINITE);
+		//GetExitCodeThread(hThread, (DWORD*)&hModule);
 
 		// Add the module to the process's module map
 		if (hModule) {
