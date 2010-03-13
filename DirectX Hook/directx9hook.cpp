@@ -1,6 +1,7 @@
 #include "directx9hook.h"
 #include "../Injector/System.cpp"
 
+HANDLE								CDirectX9Hook::hThread = 0;
 CDirectX9Hook::addr_t				CDirectX9Hook::pVtable = 0;
 CDirectX9Hook::DetourMap_t			CDirectX9Hook::detours;
 
@@ -45,9 +46,8 @@ void CDirectX9Hook::LocateDeviceVtable()
 
 	// see readme.txt
 	if (GetModuleHandle("d3d9.dll")) {
-		if (!HookRuntime()) {
-			HookNormal();
-		}
+		HookNormal();
+		HookRuntime();
 	} else {
 		// Dynamic hook
 	}
@@ -73,93 +73,32 @@ void CDirectX9Hook::HookDynamic()
 
 }
 
-int CDirectX9Hook::HookRuntime()
+void CDirectX9Hook::HookRuntime()
 {
-	//return;
-	//MessageBoxW(0, L"Attempting a runtime DirectX hook...", L"DX Hook", MB_ICONINFORMATION);
+	unsigned long base_d3d9 = (unsigned long)GetModuleHandle("d3d9.dll");
+	addr_t addr_jmp = (addr_t)(base_d3d9 + 0x6F20);
+	addr_t addr_cave = (addr_t)(base_d3d9 + 0x1A86DE);
+	addr_t deadbeef = (addr_t)&pVtable;
+
+	unsigned char patch_jmp[]	= {0xE9, 0xB9, 0x17, 0x1A, 0x00};
+	unsigned char patch_cave[]	= {0x8B, 0x0E, 0x8B, 0x51, 0x04, 0x50, 0x8B, 0xC6, 0x8B, 0x00, 0xA3, 0xEF, 0xBE, 0xAD, 0xDE, 0x58, 0xE9, 0x32, 0xE8, 0xE5, 0xFF};
 	
-	WNDCLASSEXW wc;
+	memcpy((void*)((unsigned long)patch_cave + 11), (void*)&deadbeef, 4);
 
-    ZeroMemory(&wc, sizeof(WNDCLASSEXW));
+	DWORD dwOldProtect;
+	if (!VirtualProtect((void*)addr_jmp, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect) ||
+		!VirtualProtect((void*)addr_cave, 21, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+			return;
 
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = 0;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
-    wc.lpszClassName = L"WindowClass";
+	//MessageBoxW(0, L"Writing code cave", L"DX Hook", MB_ICONINFORMATION);
 
-    RegisterClassExW(&wc);
+	memcpy((void*)addr_cave, (void*)patch_cave, 21);
+	memcpy((void*)addr_jmp, (void*)patch_jmp, 5);
 
-    HWND hWndDummy = CreateWindowExW(NULL,
-                          L"WindowClass",
-                          L"Our First Direct3D Program",
-                          WS_OVERLAPPEDWINDOW,
-                          300, 300,
-                          800, 600,
-                          NULL,
-                          NULL,
-                          0,
-                          NULL);
+	VirtualProtect((void*)addr_jmp, 5, dwOldProtect, &dwOldProtect);
+	VirtualProtect((void*)addr_cave, 21, dwOldProtect, &dwOldProtect);
 
-	if (!hWndDummy) {
-		//MessageBoxW(0, L"Created dummy window", L"DX Hook", MB_ICONERROR);
-		//MessageBoxW(0, System::GetSystemError().c_str(), L"DX Hook", MB_ICONERROR);
-		return 0;
-	} else {
-		//MessageBoxW(0, L"Created dummy window", L"DX Hook", MB_ICONINFORMATION);
-	}
-	
-	IDirect3D9* d3dDummy = Direct3DCreate9(D3D_SDK_VERSION);
-
-	if (!d3dDummy) {
-		//MessageBoxW(0, L"Created dummy IDirect3D object", L"DX Hook", MB_ICONERROR);
-		return 0;
-	} else {
-		//MessageBoxW(0, L"Created dummy IDirect3D object", L"DX Hook", MB_ICONINFORMATION);
-	}
-
-	IDirect3DDevice9* d3dDevDummy;
-	D3DPRESENT_PARAMETERS d3dpp;    // create a struct to hold various device information
-
-    ZeroMemory(&d3dpp, sizeof(d3dpp));    // clear out the struct for use
-    d3dpp.Windowed = TRUE;    // program windowed, not fullscreen
-    d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;    // discard old frames
-    d3dpp.hDeviceWindow = hWndDummy;    // set the window to be used by Direct3D
-	d3dpp.BackBufferWidth = 1;
-	d3dpp.BackBufferHeight = 1;
-	d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
-
-	//MessageBoxW(0, L"Attempting to create dummy device...", L"DX Hook", MB_ICONINFORMATION);
-
-    // create a device class using this information and the info from the d3dpp stuct
-    HRESULT hResult = d3dDummy->CreateDevice(D3DADAPTER_DEFAULT,
-					  D3DDEVTYPE_SW,
-                      hWndDummy,
-                      D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-                      &d3dpp,
-                      &d3dDevDummy);
-
-	if (!hResult || !d3dDevDummy) {
-		//MessageBoxW(0, L"Created dummy d3d device", L"DX Hook", MB_ICONERROR);
-		return 0;
-	} else {
-		MessageBoxW(0, L"Created dummy d3d device", L"DX Hook", MB_ICONINFORMATION);
-	}
-
-	pVtable = CHook::GetVtableAddress((void*)d3dDevDummy);
-
-	//MessageBoxW(0, L"Stored vtable", L"DX Hook", MB_ICONINFORMATION);
-
-	d3dDevDummy->Release();
-	d3dDummy->Release();
-
-	DestroyWindow(hWndDummy);
-
-	ApplyPendingHooks();
-
-	return 1;
+	hThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)thread_WaitForVtableAndHook, 0, 0, 0);
 }
 
 void CDirectX9Hook::ApplyPendingHooks()
@@ -176,12 +115,28 @@ void CDirectX9Hook::ApplyPendingHooks()
 	detours.clear();
 }
 
+// this should be removed, a callback can be called from the code-cave. much better
+DWORD WINAPI CDirectX9Hook::thread_WaitForVtableAndHook(void* param)
+{
+	//MessageBoxW(0, L"Waiting for vtable", L"DX Hook", MB_ICONINFORMATION);
+
+	// Wait for vtable to get written by code cave
+	while (!pVtable) {
+		Sleep(10);
+	}
+
+	//MessageBoxW(0, L"vtable written. hooking", L"DX Hook", MB_ICONINFORMATION);
+	ApplyPendingHooks();
+
+	return TRUE;
+}
+
 IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
 {
 	IDirect3D9* orig = orig_Direct3DCreate9(sdkVersion);
 
 	static bool hooked = false;
-	if (!hooked) {
+	if (!hooked && !pVtable) {
 		//MessageBoxW(0, L"Inside hooked Direct3DCreate9\nHooking CreateDevice", L"DX Hook", MB_ICONINFORMATION);
 		addr_t d3dVtable = CHook::GetVtableAddress((void*)orig);
 		if (d3dVtable) {
@@ -198,11 +153,14 @@ IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
 
 HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface)
 {
-	//MessageBoxW(0, L"Inside detoured CreateDevice", L"DX Hook", MB_ICONINFORMATION);
-
 	HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
+	std::wstringstream ss;
+	ss << L"d3d9.dll: " << (void*)GetModuleHandle("d3d9.dll") << L"\nDevice pointer: " << (void*)*ppReturnedDeviceInterface;
+	MessageBoxW(0, ss.str().c_str(), L"DX Hook", MB_ICONINFORMATION);
+
 	if (!pVtable) {
+		TerminateThread(hThread, 0);
 		pVtable = CHook::GetVtableAddress((void*)*ppReturnedDeviceInterface);
 		ApplyPendingHooks();
 	}
