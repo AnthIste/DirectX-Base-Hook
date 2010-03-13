@@ -36,10 +36,16 @@ void CDirectX9Hook::DetourDirectX(unsigned int offset, void *pDetour, void* pOri
 
 void CDirectX9Hook::DetourRemove(unsigned int offset)
 {
+	// get the detour based on its offset
 	Detour_t detour = detours[offset];
 
-	void* origProc = reinterpret_cast<void*>(*(detour.pOrig));
-	CHook::NewDetour((DWORD*)pVtable, offset, (FARPROC)origProc);
+	if (detour.pOrig) {
+		// Get a pointer to the original function
+		addr_t origProc = *(addr_t*)detour.pOrig;
+
+		// Replace the detour function in the vtable with the original
+		CHook::NewDetour((DWORD*)pVtable, offset, (FARPROC)origProc);
+	}
 }
 
 void CDirectX9Hook::LocateDeviceVtable()
@@ -134,14 +140,10 @@ void CDirectX9Hook::ApplyPendingHooks()
 // this should be removed, a callback can be called from the code-cave. much better
 DWORD WINAPI CDirectX9Hook::thread_WaitForVtableAndHook(void* param)
 {
-	//MessageBoxW(0, L"Waiting for vtable", L"DX Hook", MB_ICONINFORMATION);
-
 	// Wait for vtable to get written by code cave
 	while (!pVtable) {
 		Sleep(10);
 	}
-
-	//MessageBoxW(0, L"vtable written. hooking", L"DX Hook", MB_ICONINFORMATION);
 	ApplyPendingHooks();
 
 	return TRUE;

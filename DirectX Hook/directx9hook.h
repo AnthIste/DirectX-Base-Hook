@@ -6,7 +6,6 @@
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <map>
-#include <algorithm>
 #include <sstream>
 #include "../CHook/CHook.h"
 #include "../Injector/System.h"

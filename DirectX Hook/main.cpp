@@ -12,7 +12,6 @@ EndScene_t orig_EndScene;
 // Define the detour function
 FARPROC APIENTRY hook_EndScene(IDirect3DDevice9* pDevice)
 {
-	//MessageBoxA(0, "Detoured EndScene!", "BLEH!!!", MB_ICONINFORMATION);
 	D3DRECT rec = {0, 0, 20, 20};                     
 	pDevice->Clear(1, &rec, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 0, 0), 0,  0);  
 
