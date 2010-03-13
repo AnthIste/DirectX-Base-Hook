@@ -3,9 +3,13 @@
 #include <d3dx9.h>
 #include "directx9hook.h"
 
+// Define a function pointer type for whatever you're hooking. Not necessary, but easier
 typedef FARPROC (APIENTRY *EndScene_t)(IDirect3DDevice9* pDevice);
+
+// Define a pointer to hold the original function
 EndScene_t orig_EndScene;
 
+// Define the detour function
 FARPROC APIENTRY hook_EndScene(IDirect3DDevice9* pDevice)
 {
 	//MessageBoxA(0, "Detoured EndScene!", "BLEH!!!", MB_ICONINFORMATION);
@@ -19,7 +23,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 {
 	switch (reason) {
 		case DLL_PROCESS_ATTACH:
-			//MessageBoxA(0, "Dll Injected!", "BLEH!!!", MB_ICONINFORMATION);
+			// Hook the function (as many as you need, at any time)
 			CDirectX9Hook::DetourDirectX(42, (void*)hook_EndScene, (void*)&orig_EndScene);
 			break;
 	}
