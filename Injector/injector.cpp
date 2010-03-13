@@ -232,7 +232,7 @@ DWORD CInjector::GetProcessIdByName(std::wstring processName)
 std::wstring CInjector::StripPath(std::wstring filePath)
 {
 	int pos = -1;
-	for (size_t k = 0; k < filePath.length(); k++)
+	for (int k = 0; k < filePath.length(); k++)
 		if (filePath[k] == L'\\')
 			pos = k;
 
@@ -247,7 +247,7 @@ std::wstring CInjector::StripPath(std::wstring filePath)
 std::wstring CInjector::StripFile(std::wstring filePath)
 {
 	int pos = -1;
-	for (size_t k = 0; k < filePath.length(); k++)
+	for (int k = 0; k < filePath.length(); k++)
 		if (filePath[k] == L'\\')
 			pos = k;
 
