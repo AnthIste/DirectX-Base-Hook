@@ -1,7 +1,6 @@
 #include "directx9hook.h"
 #include "../Injector/System.cpp"
 
-HANDLE								CDirectX9Hook::hThread = 0;
 CDirectX9Hook::addr_t				CDirectX9Hook::pVtable = 0;
 CDirectX9Hook::DetourMap_t			CDirectX9Hook::detours;
 
@@ -88,36 +87,48 @@ void CDirectX9Hook::HookDynamic()
 void CDirectX9Hook::HookRuntime()
 {
 	unsigned long base_d3d9 = (unsigned long)GetModuleHandle("d3d9.dll");	// Base address of d3d9.dll.
-	addr_t addr_jmp = (addr_t)(base_d3d9 + 0x6F20);							// Address of jmp patch.
+	addr_t addr_jmp = (addr_t)(base_d3d9 + 0x0B91B);							// Address of jmp patch.
 	addr_t addr_cave = (addr_t)(base_d3d9 + 0x1A86DE);						// Address of code cave.
+	
+	// get the function pointer, store in in a variable and then store this
+	// variables address so that it can be read from the ASM code:
+	// MOV EAX,DWORD PTR DS:[66666666] ; 66666666 = ptr to function ptr
+	// this extra step is needed coz a func ptr isnt a normal variable
+	// funcptr is static, else it wont be available to read from later
+	// when the ASM executes (stack variables will be destroyed)
+	static addr_t funcptr = (addr_t)CaveCallback;
+	static addr_t* pFuncPtr = &funcptr;
+
 	addr_t deadbeef = (addr_t)&pVtable;										// Stores address of our vtable
 																			// variable to copy into the asm
 																			// instructions.
 
 	// See documentation for ASM listing
-	unsigned char patch_jmp[]	= {0xE9, 0xB9, 0x17, 0x1A, 0x00};
-	unsigned char patch_cave[]	= {0x8B, 0x0E, 0x8B, 0x51, 0x04, 0x50, 0x8B, 0xC6, 0x8B, 0x00, 0xA3, 0xEF, 0xBE, 0xAD, 0xDE, 0x58, 0xE9, 0x32, 0xE8, 0xE5, 0xFF};
+	unsigned char patch_jmp[]	= {0xE9, 0xBE, 0xCD, 0x19, 0x00};
+	unsigned char patch_cave[]	= {0x8B, 0x08, 0x8B, 0x51, 0x04, 0x50, 0x8B, 0x00, 0xA3, 0xEF, 0xBE, 0xAD, 0xDE, 0xA1, 0x66, 0x66, 0x66, 0x66, 0x60, 0xFF, 0xD0, 0x61, 0x58, 0xE9, 0x26, 0x32, 0xE6, 0xFF};
 	
 	// Copy the address of our vtable variable into the asm code so that the found vtable is copied
 	// directly into a class variable
-	memcpy((void*)((unsigned long)patch_cave + 11), (void*)&deadbeef, 4);
+	memcpy((void*)((unsigned long)patch_cave + 9), (void*)&deadbeef, 4);
+	memcpy((void*)((unsigned long)patch_cave + 14), (void*)&pFuncPtr, 4);
 
 	// Remove write protection
 	DWORD dwOldProtect;
 	if (!VirtualProtect((void*)addr_jmp, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect) ||
-		!VirtualProtect((void*)addr_cave, 21, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+		!VirtualProtect((void*)addr_cave, 28, PAGE_EXECUTE_READWRITE, &dwOldProtect))
 			return;
 
 	// Write the instructions to d3d9.dll
-	memcpy((void*)addr_cave, (void*)patch_cave, 21);
+	memcpy((void*)addr_cave, (void*)patch_cave, 28);
 	memcpy((void*)addr_jmp, (void*)patch_jmp, 5);
 
 	// Restore protection
 	VirtualProtect((void*)addr_jmp, 5, dwOldProtect, &dwOldProtect);
-	VirtualProtect((void*)addr_cave, 21, dwOldProtect, &dwOldProtect);
+	VirtualProtect((void*)addr_cave, 28, dwOldProtect, &dwOldProtect);
 
-	// To be removed: Rather use a callback that gets called directly from the code cave
-	hThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)thread_WaitForVtableAndHook, 0, 0, 0);
+	std::wstringstream ss;
+	ss << L"funcptr: " << (void*)funcptr << L" &funcptr: " << (void*)&funcptr << L" pFuncPtr: " << (void*)pFuncPtr;
+	//MessageBoxW(0, ss.str().c_str(), 0, 0);
 }
 
 void CDirectX9Hook::ApplyPendingHooks()
@@ -137,16 +148,26 @@ void CDirectX9Hook::ApplyPendingHooks()
 	detours.clear();
 }
 
-// this should be removed, a callback can be called from the code-cave. much better
-DWORD WINAPI CDirectX9Hook::thread_WaitForVtableAndHook(void* param)
+void CDirectX9Hook::CaveCallback(void)
 {
-	// Wait for vtable to get written by code cave
-	while (!pVtable) {
-		Sleep(10);
-	}
 	ApplyPendingHooks();
 
-	return TRUE;
+	unsigned long base_d3d9 = (unsigned long)GetModuleHandle("d3d9.dll");	// Base address of d3d9.dll.
+	addr_t addr_jmp = (addr_t)(base_d3d9 + 0x0B91B);							// Address of jmp patch.
+	unsigned char patch_orig[] = {0x8B, 0x08, 0x8B, 0x51, 0x04};
+	
+	// Remove write protection
+	DWORD dwOldProtect;
+	if (!VirtualProtect((void*)addr_jmp, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+			return;
+
+	// Write the instructions to d3d9.dll
+	memcpy((void*)addr_jmp, (void*)patch_orig, 5);
+
+	// Restore protection
+	VirtualProtect((void*)addr_jmp, 5, dwOldProtect, &dwOldProtect);
+
+	return;
 }
 
 IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
@@ -176,16 +197,13 @@ HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter,
 	// Call the original to gain access to the created device
 	HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-	/*
 	// Debug info used to make runtime hook
 	std::wstringstream ss;
 	ss << L"d3d9.dll: " << (void*)GetModuleHandle("d3d9.dll") << L"\nDevice pointer: " << (void*)*ppReturnedDeviceInterface;
 	MessageBoxW(0, ss.str().c_str(), L"DX Hook", MB_ICONINFORMATION);
-	*/
 
 	// Ensure that we dont hook twice
 	if (!pVtable) {
-		TerminateThread(hThread, 0);
 		// Get the device's vtable
 		pVtable = CHook::GetVtableAddress((void*)*ppReturnedDeviceInterface);
 		

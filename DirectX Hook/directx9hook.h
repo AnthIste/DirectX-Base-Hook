@@ -49,7 +49,7 @@ class CDirectX9Hook {
 		static void HookRuntime();
 		static void ApplyPendingHooks();
 
-		static DWORD WINAPI thread_WaitForVtableAndHook(void* param);
+		static void CaveCallback();
 
 		// Detours used by the hook
 		typedef IDirect3D9* (APIENTRY *Direct3DCreate9_t)(UINT);
@@ -59,7 +59,6 @@ class CDirectX9Hook {
 		static HRESULT APIENTRY hook_CreateDevice(IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface);
 
 		// static members
-		static HANDLE hThread;
 		static addr_t pVtable;
 		static DetourMap_t detours;
 
