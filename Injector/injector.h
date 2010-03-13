@@ -36,10 +36,10 @@ class CInjector {
 		int RefreshProcessList();
 		ProcessList_t GetProcessList();
 
-
 	private:
 		DWORD GetProcessIdByName(std::wstring processName);
 		std::wstring StripPath(std::wstring filePath);
+		std::wstring StripFile(std::wstring fullPath);
 		int SetDebugPrivilege();
 
 		static ProcessMap_t processes;

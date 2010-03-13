@@ -40,10 +40,14 @@ void CDirectX9Hook::LocateDeviceVtable()
 {
 	//MessageBoxW(0, L"Locating vtable for hooking", L"DX Hook", MB_ICONINFORMATION);
 	
+	if (pVtable)
+		return;
+
 	// see readme.txt
 	if (GetModuleHandle("d3d9.dll")) {
-		HookNormal();
-		HookRuntime();
+		if (!HookRuntime()) {
+			HookNormal();
+		}
 	} else {
 		// Dynamic hook
 	}
@@ -59,6 +63,7 @@ void CDirectX9Hook::HookNormal()
 	//MessageBoxW(0, L"Attempting a normal DirectX hook...", L"DX Hook", MB_ICONINFORMATION);
 
 	if (!pVtable) {
+		//MessageBoxW(0, L"HookingDirect3DCreate9 ", L"DX Hook", MB_ICONINFORMATION);
 		orig_Direct3DCreate9 = (Direct3DCreate9_t)DetourFunction((PBYTE)Direct3DCreate9, (PBYTE)hook_Direct3DCreate9);
 	}
 }
@@ -68,13 +73,10 @@ void CDirectX9Hook::HookDynamic()
 
 }
 
-void CDirectX9Hook::HookRuntime()
+int CDirectX9Hook::HookRuntime()
 {
+	//return;
 	//MessageBoxW(0, L"Attempting a runtime DirectX hook...", L"DX Hook", MB_ICONINFORMATION);
-	return;
-	if (pVtable) {
-		return;
-	}
 	
 	WNDCLASSEXW wc;
 
@@ -104,7 +106,7 @@ void CDirectX9Hook::HookRuntime()
 	if (!hWndDummy) {
 		//MessageBoxW(0, L"Created dummy window", L"DX Hook", MB_ICONERROR);
 		//MessageBoxW(0, System::GetSystemError().c_str(), L"DX Hook", MB_ICONERROR);
-		return;
+		return 0;
 	} else {
 		//MessageBoxW(0, L"Created dummy window", L"DX Hook", MB_ICONINFORMATION);
 	}
@@ -113,7 +115,7 @@ void CDirectX9Hook::HookRuntime()
 
 	if (!d3dDummy) {
 		//MessageBoxW(0, L"Created dummy IDirect3D object", L"DX Hook", MB_ICONERROR);
-		return;
+		return 0;
 	} else {
 		//MessageBoxW(0, L"Created dummy IDirect3D object", L"DX Hook", MB_ICONINFORMATION);
 	}
@@ -125,34 +127,39 @@ void CDirectX9Hook::HookRuntime()
     d3dpp.Windowed = TRUE;    // program windowed, not fullscreen
     d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;    // discard old frames
     d3dpp.hDeviceWindow = hWndDummy;    // set the window to be used by Direct3D
+	d3dpp.BackBufferWidth = 1;
+	d3dpp.BackBufferHeight = 1;
+	d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
 
 	//MessageBoxW(0, L"Attempting to create dummy device...", L"DX Hook", MB_ICONINFORMATION);
 
     // create a device class using this information and the info from the d3dpp stuct
-    d3dDummy->CreateDevice(D3DADAPTER_DEFAULT,
-                      D3DDEVTYPE_HAL,
+    HRESULT hResult = d3dDummy->CreateDevice(D3DADAPTER_DEFAULT,
+					  D3DDEVTYPE_SW,
                       hWndDummy,
                       D3DCREATE_SOFTWARE_VERTEXPROCESSING,
                       &d3dpp,
                       &d3dDevDummy);
 
-	if (!d3dDevDummy) {
+	if (!hResult || !d3dDevDummy) {
 		//MessageBoxW(0, L"Created dummy d3d device", L"DX Hook", MB_ICONERROR);
-		return;
+		return 0;
 	} else {
-		//MessageBoxW(0, L"Created dummy d3d device", L"DX Hook", MB_ICONINFORMATION);
+		MessageBoxW(0, L"Created dummy d3d device", L"DX Hook", MB_ICONINFORMATION);
 	}
 
 	pVtable = CHook::GetVtableAddress((void*)d3dDevDummy);
 
 	//MessageBoxW(0, L"Stored vtable", L"DX Hook", MB_ICONINFORMATION);
 
-	//d3dDevDummy->Release();
-	//d3dDummy->Release();
+	d3dDevDummy->Release();
+	d3dDummy->Release();
 
-	//DestroyWindow(hWndDummy);
+	DestroyWindow(hWndDummy);
 
 	ApplyPendingHooks();
+
+	return 1;
 }
 
 void CDirectX9Hook::ApplyPendingHooks()
@@ -195,8 +202,10 @@ HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter,
 
 	HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-	pVtable = CHook::GetVtableAddress((void*)*ppReturnedDeviceInterface);
-	ApplyPendingHooks();
+	if (!pVtable) {
+		pVtable = CHook::GetVtableAddress((void*)*ppReturnedDeviceInterface);
+		ApplyPendingHooks();
+	}
 
 	return result;
 }

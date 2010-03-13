@@ -40,13 +40,14 @@ class CDirectX9Hook {
 		static void LocateDeviceVtable();
 		static void ScheduleDetour(Detour_t detour);
 
+		// Dummy WndProc so that CreateWindow does not fail
 		static HRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) { return TRUE; }
 
 		// Different hook methods
-		static void HookNormal();
-		static void HookDynamic();
-		static void HookRuntime();
-		static void ApplyPendingHooks();
+		static void	HookNormal();
+		static void	HookDynamic();
+		static int	HookRuntime();
+		static void	ApplyPendingHooks();
 
 		// Detours used by the hook
 		typedef IDirect3D9* (APIENTRY *Direct3DCreate9_t)(UINT);

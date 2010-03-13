@@ -67,8 +67,8 @@ int CInjector::Inject(std::wstring dllPath, std::wstring processName, DWORD pId)
 		}
 
 		// Wait for the thread return code (HMODULE of loaded module)
-		//WaitForSingleObject(hThread, INFINITE);
-		//GetExitCodeThread(hThread, (DWORD*)&hModule);
+		WaitForSingleObject(hThread, INFINITE);
+		GetExitCodeThread(hThread, (DWORD*)&hModule);
 
 		// Add the module to the process's module map
 		if (hModule) {
@@ -104,6 +104,9 @@ int CInjector::InjectAuto(std::wstring dllPath, std::wstring processPath)
 	si.cb = sizeof(si);
 
 	try {
+		std::wstring exeDirectory = StripFile(processPath);
+		SetCurrentDirectoryW(exeDirectory.c_str());
+
 		// Create the process
 		if (!CreateProcessW(0,
 			const_cast<LPWSTR>(processPath.c_str()),
@@ -228,16 +231,29 @@ DWORD CInjector::GetProcessIdByName(std::wstring processName)
 // Strips the leading path and returns only the filename
 std::wstring CInjector::StripPath(std::wstring filePath)
 {
-	std::wstring::size_type pos = std::wstring::npos, last;
-	
-	do {
-		last = pos;
-		pos = filePath.find('\\', pos);
-	} while (pos != std::wstring::npos);
+	int pos = -1;
+	for (int k = 0; k < filePath.length(); k++)
+		if (filePath[k] == L'\\')
+			pos = k;
 
-	if (last != std::wstring::npos) {
-		return filePath.substr(pos, filePath.length() - pos);
+	if (pos != -1) {
+		return filePath.substr(pos+1, filePath.length() - pos);
 	} else {
 		return filePath;
+	}
+}
+
+// Strips the filename and leaves the path
+std::wstring CInjector::StripFile(std::wstring filePath)
+{
+	int pos = -1;
+	for (int k = 0; k < filePath.length(); k++)
+		if (filePath[k] == L'\\')
+			pos = k;
+
+	if (pos != -1) {
+		return filePath.substr(0, pos+1);
+	} else {
+		return L"";
 	}
 }
