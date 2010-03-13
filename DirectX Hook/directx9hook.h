@@ -47,6 +47,7 @@ class CDirectX9Hook {
 		static void ApplyPendingHooks();
 
 		static void CaveCallback();
+		static DWORD WINAPI CreateDummyDevice(void* param);
 
 		typedef IDirect3D9 *(APIENTRY *Direct3DCreate9_t)(UINT);
 		static IDirect3D9 *APIENTRY hook_Direct3DCreate9(UINT sdkVersion);
@@ -59,6 +60,8 @@ class CDirectX9Hook {
 
 		static Direct3DCreate9_t oDirect3DCreate9;
 		static CreateDevice_t oCreateDevice;
+
+		static CRITICAL_SECTION criticalSection;
 };
 
 #endif
