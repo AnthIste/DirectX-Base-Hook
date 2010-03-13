@@ -170,5 +170,11 @@ BOOL CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	System::SetDebugPrivilege();
-	return DialogBoxW(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), 0, DialogProc);
+	if(!DialogBoxParamW(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), 0, DialogProc, 0L)) {
+		MessageBoxW(0, System::GetSystemError().c_str(), 0, 0);
+		return 0;
+	}
+	else {
+		return 1337;
+	}
 }

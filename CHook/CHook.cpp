@@ -3,26 +3,31 @@
 #include "CHook.h"
  
 // You need to define static class variables in _A_ source file somewhere
-CHook CHook::m_pCHook;
-dynh_list *CHook::m_pDynHooks, *CHook::m_pDynStart;
+//CHook CHook::m_pCHook;
+dynh_list *CHook::pDynHooks, *CHook::pDynStart;
  
+BOOL PatchAPI(LPSTR lpszLib, LPSTR lpszFunc, FARPROC *lpOldFunc, FARPROC fpNewFunc); // by Napalm
+
+typedef FARPROC (WINAPI *GetProcType)(HMODULE, LPCSTR);
+GetProcType gProctype;
+
 // Hook GetProcAddress on runtime, for dynamic hooking features.
 CHook::CHook( void )
 {
-	//if(!NewDetour((FARPROC)GetProcAddress, (FARPROC)h_fnGetProcAddress))
-	//	MessageBoxA(0, "Detour failed!", "Fail", MB_ICONASTERISK);
+	if(!PatchAPI("User32.dll", "MessageBoxA", (FARPROC *)&gProctype, (FARPROC)h_fnGetProcAddress))
+		MessageBoxA(0, "Detour failed!", "Fail", MB_ICONASTERISK);
 }
  
 // Free up the linked list memory.
 CHook::~CHook( void )
 {
-	dynh_list *walk_list = m_pDynStart;
+	/*dynh_list *walk_list = pDynStart;
 	while(walk_list) {
 		walk_list = walk_list->next_hook;
-		free(walk_list->s_szfnName);
+		free(walk_list->szfnName);
 		free(walk_list);
-		m_pDynStart = walk_list;
-	}
+		pDynStart = walk_list;
+	}*/
 }
  
 // We hook GetProcAddress, to implement dynamic hooking.
@@ -30,10 +35,10 @@ CHook::~CHook( void )
 // process is looking for != a function we want to hook.
 FARPROC WINAPI CHook::h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName )
 {
-	dynh_list *walk_list = m_pDynStart;
+	dynh_list *walk_list = pDynStart;
 	while(walk_list) {
-		if(walk_list->s_dwModBase == hModule && !strcmp(walk_list->s_szfnName, lpProcName)) 
-			return walk_list->s_pfnFunc;
+		if(walk_list->dwModBase == hModule && !strcmp(walk_list->szfnName, lpProcName)) 
+			return walk_list->pfnFunc;
 		walk_list = walk_list->next_hook;
 	}
  
@@ -75,31 +80,56 @@ bool CHook::AddDynamicHook( __in LPSTR lpLibName, __in LPSTR lpFuncName, __in FA
 	if(!lpLibName || !lpFuncName || IsBadCodePtr(pfnDetour))
 		return false;
  
-	while(m_pDynHooks->next_hook)
-		m_pDynHooks = m_pDynHooks->next_hook;
- 
-	if(!m_pDynHooks) {
-		if(!(m_pDynStart = m_pDynHooks = (dynh_list *)malloc(sizeof(dynh_list))))
+	if(!pDynHooks) {
+		if(!(pDynStart = pDynHooks = (dynh_list *)malloc(sizeof(dynh_list))))
 			return false;
+		pDynHooks->next_hook = NULL;
 	} else {
-		if(!(m_pDynHooks->next_hook = (dynh_list *)malloc(sizeof(dynh_list)))) 
+		if(!(pDynHooks->next_hook = (dynh_list *)malloc(sizeof(dynh_list)))) 
 			return false;
-		m_pDynHooks = m_pDynHooks->next_hook;
+		pDynHooks = pDynHooks->next_hook;
 	}
  
-	m_pDynHooks->next_hook		= NULL;
-	m_pDynHooks->s_dwModBase	= GetModuleHandleA(lpLibName);
-	m_pDynHooks->s_pfnFunc		= pfnDetour;
-	m_pDynHooks->s_szfnName		= _strdup(lpFuncName);
+	pDynHooks->next_hook	= NULL;
+	pDynHooks->dwModBase	= GetModuleHandleA(lpLibName);
+	pDynHooks->pfnFunc		= pfnDetour;
+	pDynHooks->szfnName		= _strdup(lpFuncName);
  
-	if(!m_pDynHooks->s_szfnName) {
-		free(m_pDynHooks);
+	if(!pDynHooks->szfnName) {
+		free(pDynHooks);
 		return false;
 	}
+
+	MessageBoxA(0, "Inserted Hook...", pDynHooks->szfnName, 0);
  
 	return true;
 }
  
+BOOL PatchAPI(LPSTR lpszLib, LPSTR lpszFunc, FARPROC *lpOldFunc, FARPROC fpNewFunc) // by Napalm
+{
+	BOOL    bResult = FALSE;
+	DWORD   dwProtect;
+	LPBYTE  lpPatch;
+	FARPROC fpOldFunc;
+
+	fpOldFunc = GetProcAddress(LoadLibraryA(lpszLib), lpszFunc);
+	if(fpOldFunc){
+		lpPatch = (LPBYTE)fpOldFunc - 5;
+		if(!memcmp(lpPatch, "\x90\x90\x90\x90\x90\x8B\xFF", 7)){
+			if(VirtualProtect(lpPatch, 7, PAGE_EXECUTE_READWRITE, &dwProtect)){
+				*lpPatch = 0xE9;
+				*(LPDWORD)(lpPatch + 1) = (DWORD)((LONG)fpNewFunc - (LONG)fpOldFunc);
+				*(LPDWORD)lpOldFunc = ((DWORD)fpOldFunc + 2);
+				InterlockedExchange((LPLONG)fpOldFunc, (LONG)((*(LPDWORD)fpOldFunc & 0xFFFF0000) | 0xF9EB));
+				VirtualProtect(lpPatch, 7, dwProtect, NULL);
+				bResult = TRUE;
+			}
+		}
+	}
+
+	return bResult;
+}
+
 // Hook a function, thread safe.
 // Credits to Napalm!
 // Will re-write this in due time.

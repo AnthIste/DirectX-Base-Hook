@@ -2,9 +2,9 @@
 #define __CHOOK_H
  
 typedef struct _dynh_list {
-	char		*s_szfnName;
-	HMODULE		s_dwModBase;
-	FARPROC		s_pfnFunc;
+	char		*szfnName;
+	HMODULE		dwModBase;
+	FARPROC		pfnFunc;
 	_dynh_list	*next_hook;
 } dynh_list;
  
@@ -20,8 +20,8 @@ class CHook {
  
 	private:
 		static FARPROC WINAPI h_fnGetProcAddress( __in HMODULE hModule, __in LPCSTR lpProcName );
-		static CHook m_pCHook;
-		static dynh_list *m_pDynHooks, *m_pDynStart;
+		//static CHook m_pCHook;
+		static dynh_list *pDynHooks, *pDynStart;
 };
  
 #endif
