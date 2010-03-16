@@ -7,3 +7,18 @@ Basic outline of how the hook is to work (at this stage):
 * Hook using the vtable
 * Delete objects
 * Unhook on exit
+
+GetProcAddress + 57 = call [LdrGetProcedureAddress]
+
+NTSTATUS STDCALL LdrGetProcedureAddress (PVOID BaseAddress, PANSI_STRING Name, ULONG Ordinal, PVOID *ProcedureAddress)
+{
+
+}
+
+
+typedef struct _STRING
+{
+	USHORT	Length;
+	USHORT	MaximumLength;
+	PCHAR	Buffer;
+} ANSI_STRING, *PANSI_STRING;

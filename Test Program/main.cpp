@@ -1,33 +1,42 @@
 #define _WINNT_VER 0x0501
 #include <windows.h>
+#include <detours.h>
 #include <stdio.h>
-#include "../CHook/CHook.h"
+#include <vector>
+#include <time.h>
 
-// Rather use relative paths
+#pragma comment(lib, "detours.lib")
 
-#pragma comment(lib, "../Release/CHook.lib")
-
-int WINAPI MyMessageBoxA(__in_opt HWND hWnd, __in_opt LPCSTR lpText, __in_opt LPCSTR lpCaption, __in UINT uType)
+typedef struct _STRING
 {
-	lpCaption = "Hooked?";
-	return MessageBoxA(hWnd, lpText, lpCaption, uType);
+	USHORT	Length;
+	USHORT	MaximumLength;
+	PCHAR	Buffer;
+} ANSI_STRING, *PANSI_STRING;
+
+typedef int (__stdcall *msg)(HWND, LPCSTR, LPCSTR, UINT);
+msg Msg;
+typedef NTSTATUS (__stdcall *woop)(PVOID, PANSI_STRING, ULONG, PVOID*);
+woop o_woop;
+
+int WINAPI MyMessageBox(HWND hWnd, LPCSTR lpStr, LPCSTR lpStr2, UINT uMsg)
+{
+	return MessageBoxA(hWnd, "hacked", "hacked", MB_ICONINFORMATION);
+}
+
+NTSTATUS __stdcall LdrGetProcedureAddress (PVOID BaseAddress, PANSI_STRING Name, ULONG Ordinal, PVOID *ProcedureAddress)
+{
+	if(!strcmp(Name->Buffer, "MessageBoxA")) {
+		*ProcedureAddress = (PVOID)MyMessageBox;
+		return ((NTSTATUS)0x00000000L);
+	}
+	return o_woop(BaseAddress, Name, Ordinal, ProcedureAddress);
 }
 
 int __stdcall WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
-	CHook cHook;
-	cHook.AddDynamicHook("User32.dll", "MessageBoxA", (FARPROC)MyMessageBoxA);
-	void *func = (void *)GetProcAddress(LoadLibraryA("User32.dll"), "MessageBoxA");
-	if(func) {
-		__asm {
-			push 0
-			push 0
-			push 0
-			push 0
-			call [func]
-		}
-	} else {
-		MessageBoxA(0, "test", 0, 0);
-	}
+	o_woop = (woop)DetourFunction(DetourFindFunction("ntdll.dll","LdrGetProcedureAddress"), (LPBYTE)LdrGetProcedureAddress);
+	Msg = (msg)GetProcAddress(LoadLibrary("User32.dll"), "MessageBoxA");
+	Msg(0, "Test", "Test", MB_ICONERROR);
 	return 0;
 }

@@ -88,6 +88,7 @@
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="2"
+			ManagedExtensions="0"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -111,6 +112,7 @@
 				EnableIntrinsicFunctions="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -162,7 +164,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\directx9hook.cpp"
+				RelativePath=".\dx9hook.cpp"
 				>
 			</File>
 			<File
@@ -176,7 +178,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\directx9hook.h"
+				RelativePath=".\dx9hook.h"
+				>
+			</File>
+			<File
+				RelativePath=".\dx9table.h"
 				>
 			</File>
 		</Filter>
