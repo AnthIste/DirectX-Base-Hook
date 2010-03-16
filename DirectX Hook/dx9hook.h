@@ -44,8 +44,8 @@ struct Dynamic_t {
 typedef std::vector<Detour_t *>		DetourList_t;
 typedef std::vector<Dynamic_t *>	DynamicList_t;
 
-HRESULT APIENTRY hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface );
-IDirect3D9 *APIENTRY hook_Direct3DCreate9( UINT sdkVersion );
+HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface );
+IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion );
 NTSTATUS __stdcall LdrGetProcedureAddress( PVOID BaseAddress, PANSI_STRING Name, ULONG Ordinal, PVOID *ProcedureAddress );
 
 void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour );

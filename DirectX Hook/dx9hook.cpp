@@ -8,38 +8,35 @@
 #include "dx9hook.h"
 
 
-DWORD			*pTable = 0;
+DWORD			*pTable = 0, *pDxTable = 0;
 DetourList_t	DetourList;
 DynamicList_t	DynamicList;
 
-IDirect3D9 *(APIENTRY *pfnDirect3DCreate9)( UINT );
-HRESULT (APIENTRY *pfnCreateDevice)( IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9** );
-NTSTATUS (APIENTRY *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOID*);
+IDirect3D9 *(__stdcall *pfnDirect3DCreate9)( UINT );
+HRESULT (__stdcall *pfnCreateDevice)( IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9** );
+NTSTATUS (__stdcall *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOID*);
 
 
-IDirect3D9 *APIENTRY hook_Direct3DCreate9( UINT sdkVersion )
+IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
 {
 	IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion);
 	
-	static bool bHooked = false;
-
-	if(!bHooked && !pTable) {
-		DWORD *pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
-		if(pDxTable) {
-			*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
-			bHooked = !bHooked;
-		}
+	pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
+	if(pDxTable) {
+		*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
+		DetourRemove((LPBYTE)hook_Direct3DCreate9, (LPBYTE)pfnDirect3DCreate9);
 	}
-
+	
 	return iDirect3D9;
 }
 
-HRESULT APIENTRY hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface )
+HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface )
 {
 	HRESULT hRes = pfnCreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
 	if(!pTable) {
 		pTable = (DWORD *)(*(DWORD *)((void *)*ppReturnedDeviceInterface));
+		NewDetour((DWORD *)pDxTable, 16, (FARPROC)pfnCreateDevice);
 		SetSheduledHooks();
 	}
 
