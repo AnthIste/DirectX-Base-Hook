@@ -52,6 +52,7 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
 void RemoveDetour( UINT uOffset );
 void SetSheduledHooks( void );
+void FreeLists( void );
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc );
 void InsertDirectX9Cave( void );
 void DirectX9Callback( void );

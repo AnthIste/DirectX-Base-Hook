@@ -26,6 +26,8 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD dwReason, LPVOID lpReserved)
 	if(dwReason == DLL_PROCESS_ATTACH) {
 		DisableThreadLibraryCalls((HMODULE)hInstance);
 		InsertDetour(ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
+	} else if(dwReason == DLL_PROCESS_DETACH) {
+		FreeLists();
 	}
 
 	return TRUE;
