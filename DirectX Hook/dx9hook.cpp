@@ -19,11 +19,14 @@ NTSTATUS (__stdcall *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOI
 IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
 {
 	IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion); 
+
+	static bool hooked = false;
 	
 	pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
-	if(pDxTable) {
+	if(pDxTable && !hooked) {
 		*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
 		DetourRemove((LPBYTE)hook_Direct3DCreate9, (LPBYTE)pfnDirect3DCreate9);
+		hooked = true;
 	}
 	
 	return iDirect3D9;
@@ -33,10 +36,14 @@ HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE D
 {
 	HRESULT hRes = pfnCreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-	if(!pTable) {
+	static bool hooked = false;
+
+	if(!pTable && !hooked) {
 		pTable = (DWORD *)(*(DWORD *)((void *)*ppReturnedDeviceInterface));
 		NewDetour((DWORD *)pDxTable, 16, (FARPROC)pfnCreateDevice);
 		SetSheduledHooks();
+		
+		hooked = true;
 	}
 
 	return hRes;
@@ -59,7 +66,7 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 
 	if(!bHooked) {
 		*(FARPROC *)&pfnLdrGetProcedureAddress = (FARPROC)DetourFunction(DetourFindFunction("ntdll.dll", "LdrGetProcedureAddress"), (LPBYTE)LdrGetProcedureAddress);
-		bHooked = !bHooked;
+		bHooked = true;
 	}
 	
 	Dynamic_t *newDynamic = (Dynamic_t *)malloc(sizeof(Dynamic_t));
@@ -106,7 +113,11 @@ void SetSheduledHooks( void )
 {
 	for(size_t i = 0; i < DetourList.size(); i++) {
 		*(DWORD **)DetourList[i]->orig = (DWORD *)NewDetour((DWORD *)pTable, DetourList[i]->offset, (FARPROC)DetourList[i]->detour);
+		free((void*)DetourList[i]);
 	}
+
+
+	DetourList.clear();
 }
 
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc ) 
@@ -156,12 +167,14 @@ void DirectX9Callback( void )
 {
 	SetSheduledHooks();
 
-	DWORD dwOldJump, *dwDx9Jump = (DWORD *)(GetModuleHandle("d3d9.dll") + 0x0B91B);
+	DWORD dwOldJump, dwDx9Base = (DWORD)GetModuleHandle("d3d9.dll");
+	DWORD *dwDx9Jump = (DWORD *)(dwDx9Base + 0x0B91B);
 	
 	if(!VirtualProtect((void *)dwDx9Jump, 5, PAGE_EXECUTE_READWRITE, &dwOldJump))
 			return;
 
-	memcpy((void *)dwDx9Jump, "\x8B\x08\x8B\x51\x04", 5);
+	UCHAR original[] = {0x8B, 0x08, 0x8B, 0x51, 0x04};
+	memcpy((void *)dwDx9Jump, original, 5);
 
 	VirtualProtect((void *)dwDx9Jump, 5, dwOldJump, NULL);
 
