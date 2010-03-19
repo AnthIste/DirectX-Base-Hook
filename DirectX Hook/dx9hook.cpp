@@ -2,8 +2,7 @@
 // Contact us at illuz1oN@hotmail.co.uk, 
 // Thanks to Echo and others for advice.
 //
-// p.s. Node is sexy.
-
+// p.s. Node is sexy ^_^.
 #include "dx9table.h"
 #include "dx9hook.h"
 
@@ -19,7 +18,7 @@ NTSTATUS (__stdcall *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOI
 
 IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
 {
-	IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion);
+	IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion); 
 	
 	pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
 	if(pDxTable) {

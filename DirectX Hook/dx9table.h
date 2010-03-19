@@ -2,7 +2,7 @@
 // Contact us at illuz1oN@hotmail.co.uk, 
 // Thanks to Echo and others for advice.
 //
-// p.s. Node is sexy.
+// p.s. Node is sexy ^_^.
 
 #ifndef __DIRECTX9_VTABLE
 #define __DIRECTX9_VTABLE
