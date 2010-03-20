@@ -6,6 +6,7 @@
 #include "dx9table.h"
 #include "dx9hook.h"
 
+namespace DirectX9Hook {
 
 DWORD			*pTable = 0, *pDxTable = 0;
 DetourList_t	DetourList;
@@ -179,4 +180,6 @@ void DirectX9Callback( void )
 	VirtualProtect((void *)dwDx9Jump, 5, dwOldJump, NULL);
 
 	return;
+}
+
 }

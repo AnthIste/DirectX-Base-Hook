@@ -13,10 +13,11 @@
 #include <d3d9.h>
 #include <vector>
 
-
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
 #pragma comment(lib, "detours.lib")
+
+namespace DirectX9Hook {
 
 #ifndef STATUS_SUCCESS
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
@@ -55,5 +56,7 @@ void SetSheduledHooks( void );
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc );
 void InsertDirectX9Cave( void );
 void DirectX9Callback( void );
+
+}
 
 #endif

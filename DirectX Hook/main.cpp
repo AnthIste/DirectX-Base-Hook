@@ -11,7 +11,6 @@
 #include "dx9table.h"
 #include "dx9hook.h"
 
-
 FARPROC (APIENTRY *pfnEndScene)(IDirect3DDevice9 *pDevice);
 FARPROC APIENTRY hook_EndScene(IDirect3DDevice9 *pDevice)
 {
@@ -25,7 +24,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
 	if(dwReason == DLL_PROCESS_ATTACH) {
 		DisableThreadLibraryCalls((HMODULE)hInstance);
-		InsertDetour(ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
+		DirectX9Hook::InsertDetour(DirectX9Hook::ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
 	}
 
 	return TRUE;
