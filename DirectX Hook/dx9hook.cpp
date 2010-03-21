@@ -1,5 +1,6 @@
-// DirectX9 Hook by AntIste and illuz1oN (C) 2010,
-// Contact us at illuz1oN@hotmail.co.uk, 
+// DirectX9 Hook by AnthIste and illuz1oN (C) 2010,
+// Contact us at illuz1oN@hotmail.co.uk or
+// anthiste.anthiste@gmail.com,
 // Thanks to Echo and others for advice.
 //
 // p.s. Node is sexy ^_^.
@@ -13,8 +14,8 @@ DetourList_t	DetourList;
 DynamicList_t	DynamicList;
 
 IDirect3D9 *(__stdcall *pfnDirect3DCreate9)( UINT );
-HRESULT (__stdcall *pfnCreateDevice)( IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9** );
-NTSTATUS (__stdcall *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOID*);
+HRESULT		(__stdcall *pfnCreateDevice)( IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9** );
+NTSTATUS	(__stdcall *pfnLdrGetProcedureAddress)(PVOID, PANSI_STRING, ULONG, PVOID*);
 
 
 IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
@@ -89,6 +90,7 @@ void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 	newDetour->detour	= (DWORD *)pfnDetour;
 	newDetour->orig		= (DWORD *)pfnOrig;
 	newDetour->offset	= uOffset;
+	newDetour->hooked	= FALSE;
 	DetourList.push_back(newDetour);
 
 	if(!pTable) {
@@ -105,20 +107,43 @@ void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 
 void RemoveDetour( UINT uOffset )
 {
-	for(size_t i = 0; i < DetourList.size(); i++)
-		if(DetourList[i]->offset == uOffset)
-			NewDetour((DWORD *)pTable, uOffset, (FARPROC)*(DWORD **)DetourList[i]->orig);
+	DetourList_t::iterator i;
+
+	for (i = DetourList.begin(); i != DetourList.end(); i++) {
+		Detour_t* detour = *i;
+
+		if(detour->offset == uOffset && detour->hooked) {
+			NewDetour((DWORD *)pTable, uOffset, (FARPROC)*(DWORD **)detour->orig);
+			DetourList.erase(i);
+			break;
+		}
+	}
+}
+
+void RemoveDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName )
+{
+	DynamicList_t::iterator i;
+
+	for (i = DynamicList.begin(); i != DynamicList.end(); i++) {
+		Dynamic_t* dynamic = *i;
+
+		if(!strcmp(dynamic->lpLibName, lpLibName) && !strcmp(dynamic->lpFnName, lpFnName)) {
+			DynamicList.erase(i);
+			break;
+		}
+	}
 }
 
 void SetSheduledHooks( void )
 {
 	for(size_t i = 0; i < DetourList.size(); i++) {
-		*(DWORD **)DetourList[i]->orig = (DWORD *)NewDetour((DWORD *)pTable, DetourList[i]->offset, (FARPROC)DetourList[i]->detour);
-		free((void*)DetourList[i]);
+		if(!DetourList[i]->hooked) {
+			*(DWORD **)DetourList[i]->orig = (DWORD *)NewDetour((DWORD *)pTable, DetourList[i]->offset, (FARPROC)DetourList[i]->detour);
+
+			if (DetourList[i]->orig)
+				DetourList[i]->hooked = TRUE;
+		}
 	}
-
-
-	DetourList.clear();
 }
 
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc ) 
