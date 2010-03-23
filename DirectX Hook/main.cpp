@@ -47,6 +47,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD dwReason, LPVOID lpReserved)
 		case DLL_PROCESS_DETACH:
 			DirectX9Hook::RemoveDetour(DirectX9Hook::ENDSCENE);
 			DirectX9Hook::RemoveDetour(DirectX9Hook::DRAWINDEXEDPRIMITIVE);
+			DirectX9Hook::FreeLists();
 	}
 
 	return TRUE;

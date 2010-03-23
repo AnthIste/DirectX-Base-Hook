@@ -22,13 +22,13 @@ IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
 {
 	IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion); 
 
-	static bool hooked = false;
+	static bool bHooked = false;
 	
 	pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
-	if(pDxTable && !hooked) {
+	if(pDxTable && !bHooked) {
 		*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
 		DetourRemove((LPBYTE)hook_Direct3DCreate9, (LPBYTE)pfnDirect3DCreate9);
-		hooked = true;
+		bHooked = true;
 	}
 	
 	return iDirect3D9;
@@ -38,14 +38,14 @@ HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE D
 {
 	HRESULT hRes = pfnCreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-	static bool hooked = false;
+	static bool bHooked = false;
 
-	if(!pTable && !hooked) {
+	if(!pTable && !bHooked) {
 		pTable = (DWORD *)(*(DWORD *)((void *)*ppReturnedDeviceInterface));
 		NewDetour((DWORD *)pDxTable, 16, (FARPROC)pfnCreateDevice);
 		SetSheduledHooks();
 		
-		hooked = true;
+		bHooked = true;
 	}
 
 	return hRes;
@@ -143,6 +143,19 @@ void SetSheduledHooks( void )
 			if (DetourList[i]->orig)
 				DetourList[i]->hooked = TRUE;
 		}
+}
+
+void FreeLists( void )
+{
+	// FIXME: Won't the larger list not completely free now? Oh well my brain is fucked il look later
+
+	size_t i, listMax = (DetourList.size() < DynamicList.size()) ? DynamicList.size() : DetourList.size();
+
+	for(i = 0; i < listMax; i++) {
+		if(DetourList[i])
+			free(DetourList[i]);
+		if(DynamicList[i])
+			free(DynamicList[i]);
 	}
 }
 
@@ -153,12 +166,11 @@ FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc )
 	if(!VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
 		return NULL;
 
-	DWORD *pOrig = (DWORD *)pVtable[nFuncOffset];
-	pVtable[nFuncOffset] = (DWORD)pfnNewFunc;
+	FARPROC pfnOrig = (FARPROC)InterlockedExchange((PLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
 
 	VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), dwOldProtect, NULL);
 
-	return (FARPROC)pOrig;
+	return pfnOrig;
 }
 
 void InsertDirectX9Cave( void )
@@ -199,8 +211,7 @@ void DirectX9Callback( void )
 	if(!VirtualProtect((void *)dwDx9Jump, 5, PAGE_EXECUTE_READWRITE, &dwOldJump))
 			return;
 
-	UCHAR original[] = {0x8B, 0x08, 0x8B, 0x51, 0x04};
-	memcpy((void *)dwDx9Jump, original, 5);
+	memcpy((void *)dwDx9Jump, "\x8B\x08\x8B\x51\x04", 5);
 
 	VirtualProtect((void *)dwDx9Jump, 5, dwOldJump, NULL);
 
