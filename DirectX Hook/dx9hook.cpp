@@ -143,6 +143,7 @@ void SetSheduledHooks( void )
 			if (DetourList[i]->orig)
 				DetourList[i]->hooked = TRUE;
 		}
+	}
 }
 
 void FreeLists( void )
