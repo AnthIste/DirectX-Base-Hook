@@ -13,6 +13,7 @@
 #include <d3dx9.h>
 #include <d3d9.h>
 #include <vector>
+#include "dx9table.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
