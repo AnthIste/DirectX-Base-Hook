@@ -1,11 +1,14 @@
-// DirectX9 Hook by AntIste and illuz1oN (C) 2010,
-// Contact us at illuz1oN@hotmail.co.uk, 
+// DirectX9 Hook by AnthIste and illuz1oN (C) 2010,
+// Contact us at illuz1oN@hotmail.co.uk or
+// anthiste.anthiste@gmail.com,
 // Thanks to Echo and others for advice.
 //
 // p.s. Node is sexy ^_^.
 
 #ifndef __DIRECTX9_VTABLE
 #define __DIRECTX9_VTABLE
+
+namespace DirectX9Hook {
 
 enum {
 	QUERYINTERFACE, ADDREF, RELEASE, TESTCOOPERATIVELEVEL,
@@ -34,5 +37,7 @@ enum {
 	GETPIXELSHADERCONSTANTF, SETPIXELSHADERCONSTANTI, GETPIXELSHADERCONSTANTI, SETPIXELSHADERCONSTANTB,
 	GETPIXELSHADERCONSTANTB, DRAWRECTPATCH, DRAWTRIPATCH, DELETEPATCH, CREATEQUERY
 };
+
+}
 
 #endif
