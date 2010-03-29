@@ -41,9 +41,8 @@ HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE D
 	if(!pTable && !bHooked) {
 		pTable = (DWORD *)(*(DWORD *)((void *)*ppReturnedDeviceInterface));
 		NewDetour((DWORD *)pDxTable, 16, (FARPROC)pfnCreateDevice);
-		SetSheduledHooks();
-		
-		bHooked = true;
+		SetSheduledHooks();		
+		bHooked = !bHooked;
 	}
 
 	return hRes;
@@ -66,7 +65,7 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 
 	if(!bHooked) {
 		*(FARPROC *)&pfnLdrGetProcedureAddress = (FARPROC)DetourFunction(DetourFindFunction("ntdll.dll", "LdrGetProcedureAddress"), (LPBYTE)LdrGetProcedureAddress);
-		bHooked = true;
+		bHooked = !bHooked;
 	}
 	
 	Dynamic_t *newDynamic = (Dynamic_t *)malloc(sizeof(Dynamic_t));
