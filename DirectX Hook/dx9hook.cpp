@@ -78,7 +78,7 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 	DynamicList.push_back(newDynamic);
 }
 
-void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
+void DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 {
 	Detour_t *newDetour = (Detour_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(Detour_t));
 	if(!newDetour)

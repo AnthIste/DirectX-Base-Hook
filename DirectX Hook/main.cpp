@@ -25,7 +25,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD dwReason, LPVOID lpReserved)
 	switch (dwReason) {
 		case DLL_PROCESS_ATTACH:
 			DisableThreadLibraryCalls((HMODULE)hInstance);
-			InsertDetour(ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
+			DirectX9Detour(ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
 			break;
 
 		case DLL_PROCESS_DETACH:

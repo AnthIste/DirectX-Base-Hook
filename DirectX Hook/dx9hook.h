@@ -49,7 +49,7 @@ IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion );
 NTSTATUS	__stdcall LdrGetProcedureAddress( PVOID BaseAddress, PANSI_STRING Name, ULONG Ordinal, PVOID *ProcedureAddress );
 
 void	InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour );
-void	InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
+void	DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
 void	RemoveDetour( UINT uOffset );
 void	SetSheduledHooks( void );
 void	FreeLists( void );
