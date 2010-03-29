@@ -157,6 +157,10 @@
 				RelativePath=".\dx9hook.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\main.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

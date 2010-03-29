@@ -1,6 +1,5 @@
 // DirectX9 Hook by AnthIste and illuz1oN (C) 2010,
-// Contact us at illuz1oN@hotmail.co.uk or
-// anthiste.anthiste@gmail.com,
+// Contact us at illuz1oN@hotmail.co.uk or anthiste.anthiste@gmail.com,
 // Thanks to Echo and others for advice.
 //
 // p.s. Node is sexy ^_^.
@@ -13,13 +12,10 @@
 #include <d3dx9.h>
 #include <d3d9.h>
 #include <vector>
-#include "dx9table.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
 #pragma comment(lib, "detours.lib")
-
-namespace DirectX9Hook {
 
 #ifndef STATUS_SUCCESS
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
@@ -55,13 +51,10 @@ NTSTATUS	__stdcall LdrGetProcedureAddress( PVOID BaseAddress, PANSI_STRING Name,
 void	InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour );
 void	InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
 void	RemoveDetour( UINT uOffset );
-void	RemoveDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName );
 void	SetSheduledHooks( void );
 void	FreeLists( void );
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc );
 void	InsertDirectX9Cave( void );
 void	DirectX9Callback( void );
-
-}
 
 #endif
