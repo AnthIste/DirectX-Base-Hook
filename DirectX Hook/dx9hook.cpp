@@ -1,13 +1,11 @@
 // DirectX9 Hook by AnthIste and illuz1oN (C) 2010,
-// Contact us at illuz1oN@hotmail.co.uk or
-// anthiste.anthiste@gmail.com,
+// Contact us at illuz1oN@hotmail.co.uk or anthiste.anthiste@gmail.com,
 // Thanks to Echo and others for advice.
 //
 // p.s. Node is sexy ^_^.
+
 #include "dx9table.h"
 #include "dx9hook.h"
-
-namespace DirectX9Hook {
 
 DWORD			*pTable = 0, *pDxTable = 0;
 DetourList_t	DetourList;
@@ -28,7 +26,7 @@ IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
 	if(pDxTable && !bHooked) {
 		*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
 		DetourRemove((LPBYTE)hook_Direct3DCreate9, (LPBYTE)pfnDirect3DCreate9);
-		bHooked = true;
+		bHooked = !bHooked;
 	}
 	
 	return iDirect3D9;
@@ -70,7 +68,7 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 		bHooked = !bHooked;
 	}
 	
-	Dynamic_t *newDynamic = (Dynamic_t *)malloc(sizeof(Dynamic_t));
+	Dynamic_t *newDynamic = (Dynamic_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(Dynamic_t));
 	if(!newDynamic)
 		return;
 
@@ -82,14 +80,13 @@ void InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour )
 
 void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 {
-	Detour_t *newDetour = (Detour_t *)malloc(sizeof(Detour_t));
+	Detour_t *newDetour = (Detour_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(Detour_t));
 	if(!newDetour)
 		return;
 
 	newDetour->detour	= (DWORD *)pfnDetour;
 	newDetour->orig		= (DWORD *)pfnOrig;
 	newDetour->offset	= uOffset;
-	newDetour->hooked	= FALSE;
 	DetourList.push_back(newDetour);
 
 	if(!pTable) {
@@ -100,34 +97,16 @@ void InsertDetour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 			InsertDynamicDetour("d3d9.dll", "Direct3DCreate9", (FARPROC)&hook_Direct3DCreate9);
 		}
 	}
-	else
+	else {
 		SetSheduledHooks();
+	}
 }
 
 void RemoveDetour( UINT uOffset )
 {
-	DetourList_t::iterator i;
-
-	for (i = DetourList.begin(); i != DetourList.end(); i++) {
-		Detour_t* detour = *i;
-
-		if(detour->offset == uOffset && detour->hooked) {
-			NewDetour((DWORD *)pTable, uOffset, (FARPROC)*(DWORD **)detour->orig);
-			DetourList.erase(i);
-			break;
-		}
-	}
-}
-
-void RemoveDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName )
-{
-	DynamicList_t::iterator i;
-
-	for (i = DynamicList.begin(); i != DynamicList.end(); i++) {
-		Dynamic_t* dynamic = *i;
-
-		if(!strcmp(dynamic->lpLibName, lpLibName) && !strcmp(dynamic->lpFnName, lpFnName)) {
-			DynamicList.erase(i);
+	for(size_t i = 0; i < DetourList.size(); i++) {
+		if(DetourList[i]->offset == uOffset) {
+			NewDetour((DWORD *)pTable, uOffset, (FARPROC)*(DWORD **)DetourList[i]->orig);
 			break;
 		}
 	}
@@ -136,57 +115,38 @@ void RemoveDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName )
 void SetSheduledHooks( void )
 {
 	for(size_t i = 0; i < DetourList.size(); i++) {
-		if(!DetourList[i]->hooked) {
-			*(DWORD **)DetourList[i]->orig = (DWORD *)NewDetour((DWORD *)pTable, DetourList[i]->offset, (FARPROC)DetourList[i]->detour);
-
-			if (DetourList[i]->orig)
-				DetourList[i]->hooked = TRUE;
-		}
+		*(DWORD **)DetourList[i]->orig = (DWORD *)NewDetour((DWORD *)pTable, DetourList[i]->offset, (FARPROC)DetourList[i]->detour);
 	}
 }
 
 void FreeLists( void )
 {
-	// FIXME: Won't the larger list not completely free now? Oh well my brain is fucked il look later
-
 	size_t i, listMax = (DetourList.size() < DynamicList.size()) ? DynamicList.size() : DetourList.size();
 
 	for(i = 0; i < listMax; i++) {
 		if(DetourList[i])
-			free(DetourList[i]);
+			HeapFree(GetProcessHeap(), 0, DetourList[i]);
 		if(DynamicList[i])
-			free(DynamicList[i]);
+			HeapFree(GetProcessHeap(), 0, DynamicList[i]);
 	}
 }
 
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc ) 
 {
-	// NOTE:
-	// The InterlockedExchange crashes the target process. Reverted to working function for now
-	// Kept other one commented for completeness
-
-	/*DWORD dwOldProtect, *dwFuncAddress = (DWORD *)((DWORD)pVtable + nFuncOffset);
-
-	if(!VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
-		return NULL;
-
-	FARPROC pfnOrig = (FARPROC)InterlockedExchange((PLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
-
-	VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), dwOldProtect, NULL);
-
-	return pfnOrig;*/
-
 	DWORD dwOldProtect, *dwFuncAddress = (DWORD *)((DWORD)pVtable + nFuncOffset);
 
 	if(!VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
 		return NULL;
 
-	DWORD *pOrig = (DWORD *)pVtable[nFuncOffset];
-	pVtable[nFuncOffset] = (DWORD)pfnNewFunc;
+#ifdef _WIN32
+	FARPROC pfnOrig = (FARPROC)InterlockedExchange((PLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
+#else
+	FARPROC pfnOrig = (FARPROC)InterlockedExchange64((PLONGLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
+#endif
 
 	VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), dwOldProtect, NULL);
 
-	return (FARPROC)pOrig;
+	return pfnOrig;
 }
 
 void InsertDirectX9Cave( void )
@@ -230,8 +190,4 @@ void DirectX9Callback( void )
 	memcpy((void *)dwDx9Jump, "\x8B\x08\x8B\x51\x04", 5);
 
 	VirtualProtect((void *)dwDx9Jump, 5, dwOldJump, NULL);
-
-	return;
-}
-
 }
