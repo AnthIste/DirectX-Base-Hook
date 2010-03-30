@@ -27,58 +27,70 @@
 	<a name="INTRODUCTION"></a>
     <h2>Introduction</h2>
     <p>
-    This is a DirectX 9 hooking library that should work on ANY game that uses DirectX 9
-	for its rendering, and should be able to be unloaded/loaded at ANY time. Quite a tall order :).
-	Well if Fraps got it right, why cant we? Difference is, this is a code library that can be employed
-	on any job that needs a DirectX hook with as little effort as possible.
+		This is a DirectX 9 hooking library that should work on ANY game that uses DirectX 9
+		for its rendering, and should be able to be unloaded/loaded at ANY time. Quite a tall order :).
+		Well if Fraps got it right, why cant we? Difference is, this is a code library that can be employed
+		on any job that needs a DirectX hook with as little effort as possible.
     </p>
 	
 	<a name="USAGE"></a>
     <h2>Usage</h2>
     <p>
-    This library is supposed to be easy to use. All that is needed by the user is:
+		This library is supposed to be easy to use. All that is needed by the user is:
 	</p>
 	<p>
-	<li>A detour function for whatever they want to hook (eg. <code>hook_EndScene</code>)</ul>
-	<li>A pointer to hold the original function (eg. <code>EndScene_t orig_EndScene</code>)</ul>
-	<li>A call to <code>CDirectX9Hook::DetourDirectX</code></ul>
+		<li>A detour function for whatever they want to hook (eg. <code>hook_EndScene</code>)</ul>
+		<li>A pointer to hold the original function (eg. <code>pfnEndScene</code>)</ul>
+		<li>A call to <code>DirectX9Detour</code></ul>
+		<li>A call to the cleanup code, <code>FreeLists</code></ul>
 	</p>
 	<p>
-	For now, the user has to specify the function offsets themselves, 
-	(eg. EndScene has an offset of 42), but there will eventually be an enumeration for ALL
-	the offsets of ALL the <code>Direct3D9</code> and <code>Direct3DDevice9</code> functions (eg <code>CDirectX9Hook::offsets::endscene</code>)
+		The library makes use of a vtable hook, so the function offset in the vtable needs to be specified. This is a simple matter, however, 
+		as there are enumerations for the function offsets of all DirectX functions. As en example, the offset of <code>EndScene</code> would 
+		be specified by the <code>ENDSCENE</code> enumeration.
     </p>
 	<p>
-	Example usage:
+		There are some objects that are allocated on the heap that must be freed when the user is done with the library. A call to 
+		<code>FreeLists</code> is all that is necessary.
+    </p>
+	<p>
+		Example usage:
 	</p>
 	<code><pre>
+	// DirectX9 Hook by AnthIste and illuz1oN (C) 2010,
+	// Contact us at illuz1oN@hotmail.co.uk or anthiste.anthiste@gmail.com
+
 	#include &lt;windows.h&gt;
-	#include &lt;d3d9.h&gt;
-	#include &lt;d3dx9.h&gt;
-	#include "directx9hook.h"
+	#include "dx9hook.h"
 
-	// Define a function pointer type for whatever you're hooking. Not necessary, but easier
-	typedef FARPROC (APIENTRY *EndScene_t)(IDirect3DDevice9* pDevice);
-
-	// Define a pointer to hold the original function
-	EndScene_t orig_EndScene;
-
-	// Define the detour function
-	FARPROC APIENTRY hook_EndScene(IDirect3DDevice9* pDevice)
+	// Pointer to original function
+	HRESULT (APIENTRY *pfnEndScene)(IDirect3DDevice9 *pDevice);
+	
+	// Detour function
+	HRESULT APIENTRY hook_EndScene(IDirect3DDevice9 *pDevice)
 	{
-		//MessageBoxA(0, "Detoured EndScene!", "BLEH!!!", MB_ICONINFORMATION);
-		D3DRECT rec = {0, 0, 20, 20};                     
-		pDevice-&gt;Clear(1, &rec, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 0, 0), 0,  0);  
+		D3DRECT rec = { 0, 0, 20, 20 };                     
+		pDevice->Clear(1, &rec, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 255, 255), 0,  0); 
 
-		return orig_EndScene(pDevice);
+		return pfnEndScene(pDevice);
 	}
 
-	BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
+	BOOL APIENTRY DllMain(HMODULE hInstance, DWORD dwReason, LPVOID lpReserved)
 	{
-		switch (reason) {
+		switch (dwReason) {
 			case DLL_PROCESS_ATTACH:
-				// Hook the function (as many as you need, at any time)
-				CDirectX9Hook::DetourDirectX(42, (void*)hook_EndScene, (void*)&orig_EndScene);
+				DisableThreadLibraryCalls((HMODULE)hInstance);
+				
+				// Specify the function offset, the detour and the pointer to the original
+				DirectX9Detour(ENDSCENE, (FARPROC)&hook_EndScene, (FARPROC)&pfnEndScene);
+				break;
+
+			case DLL_PROCESS_DETACH:
+				// Detours can be removed at any time
+				RemoveDetour(ENDSCENE);
+				
+				// Cleanup code for the library is necessary
+				FreeLists();
 				break;
 		}
 
@@ -88,7 +100,7 @@
 
 
 	<a name="METHODS"></a>
-    <h3>3. Different hook methods</h3>
+    <h2>3. Different hook methods</h3>
 
     <p>
     There are 3 different situations in which a request can be made to hook a DirectX function:
@@ -111,144 +123,150 @@
 	later depending on which hook was successful.
 	</p>
 	<p>
-	This is checked by the following function:
+	This is checked by the detour function:
 	</p>
 	<pre><code>
-	void CDirectX9Hook::LocateDeviceVtable()
+	void DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 	{
-		// Just make sure that we dont accidentaly apply any hooks twice if they've been
-		// applied before
-		if (pVtable)
+		// Build and store a detour request object
+		Detour_t *newDetour = (Detour_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(Detour_t));
+		if(!newDetour)
 			return;
 
-		// Is DirectX available to be hooked?
-		if (GetModuleHandle("d3d9.dll")) {
-			// If it is, try a standard hook or a runtime hook
-			HookNormal();
-			HookRuntime();
-		} else {
-			// Try a dynamic hook (to be implemented)
+		newDetour->detour	= (DWORD *)pfnDetour;
+		newDetour->orig		= (DWORD *)pfnOrig;
+		newDetour->offset	= uOffset;
+		newDetour->hooked	= FALSE;
+		DetourList.push_back(newDetour);
+
+		// If we do not already have the device vtable, we need to find it
+		if(!pTable) {
+			// So we check if the DirectX module has been loaded or not
+			if(GetModuleHandle("d3d9.dll")) {
+				// If it has, attempt a STANDARD hook and a RUNTIME hook. Whichever triggers first will apply the hooks
+				*(FARPROC *)&pfnDirect3DCreate9 = (FARPROC)DetourFunction((LPBYTE)Direct3DCreate9, (LPBYTE)hook_Direct3DCreate9);	// STANDARD
+				InsertDirectX9Cave();													// RUNTIME
+			} else {
+				InsertDynamicDetour("d3d9.dll", "Direct3DCreate9", (FARPROC)&hook_Direct3DCreate9);					// DYNAMIC
+			}
+		}
+		else {
+			// We do have the device vtable, just apply the requested hooks
+			SetSheduledHooks();
 		}
 	}
 	</code></pre>
 	
 	<h3>3.1 Standard hook</h3>
 	<p>
-	This is the hook that is currently implemented. The dll needs to be injected very early (before <code>Direct3DCreate9</code> 
-	is called). To accomplish this, use the provided injector's AutoInject function.
+		This is the most basic hook that is currently implemented. The dll needs to be injected very early (before <code>Direct3DCreate9</code> 
+		is called). To accomplish this, use the provided injector's AutoInject function.
 	</p>
 	<p>
-	The basic steps of this hook are:
-	<li>
-		<p>
-		Hook <code>Direct3DCreate9</code> to gain access to the created <code>IDirect3D9</code> object
-		</p>
-		<p><pre><code>
-		void CDirectX9Hook::HookNormal()
-		{
-			// ENSURE that we dont't detour twice
-			if (!pVtable) {
-				// Hook Direct3DCreate9
-				orig_Direct3DCreate9 = (Direct3DCreate9_t)DetourFunction((PBYTE)Direct3DCreate9, (PBYTE)hook_Direct3DCreate9);
-			}
-		}
-		</code></pre></p>
-	</ul>
-	<li>
-		<p>
-		Use a vtable hook on the <em>object</em> to hook <code>CreateDevice</code>
-		</p>
-		<p><pre><code>
-		IDirect3D9* APIENTRY CDirectX9Hook::hook_Direct3DCreate9(UINT sdkVersion)
-		{
-			// Call the original function to get access to the object
-			IDirect3D9* orig = orig_Direct3DCreate9(sdkVersion);
+		The basic steps of this hook are:
+		<li>
+			<p>
+				Hook <code>Direct3DCreate9</code> to gain access to the created <code>IDirect3D9</code> object
+			</p>
+			<p><pre><code>
+				*(FARPROC *)&pfnDirect3DCreate9 = (FARPROC)DetourFunction((LPBYTE)Direct3DCreate9, (LPBYTE)hook_Direct3DCreate9);
+				</code></pre>
+			</p>
+		</ul>
+		<li>
+			<p>
+			Use a vtable hook on the <em>object</em> to hook <code>CreateDevice</code>
+			</p>
+			<p><pre><code>
+				IDirect3D9 *__stdcall hook_Direct3DCreate9( UINT sdkVersion )
+				{
+					// Call the original function
+					IDirect3D9 *iDirect3D9 = pfnDirect3DCreate9(sdkVersion); 
 
-			// Some games call this more than once, so just make sure that we only hook once
-			static bool hooked = false;
-			
-			if (!hooked && !pVtable) {
-				// Get the vtable address of the created device
-				addr_t d3dVtable = CHook::GetVtableAddress((void*)orig);
-				
-				if (d3dVtable) {
+					// Ensure that the new hook is not applied twice
+					static bool bHooked = false;
+					
+					// Get the IDirect3D9 object's vtable address
+					pDxTable = (DWORD *)(*(DWORD *)((void *)iDirect3D9));
+					
 					// Hook CreateDevice
-					orig_CreateDevice = (CreateDevice_t)CHook::NewDetour((DWORD*)d3dVtable, 16, (FARPROC)hook_CreateDevice);
+					if(pDxTable && !bHooked) {
+						*(FARPROC *)&pfnCreateDevice = NewDetour((DWORD *)pDxTable, 16, (FARPROC)hook_CreateDevice);
+						
+						// Clean up (ie remove this detour)
+						DetourRemove((LPBYTE)hook_Direct3DCreate9, (LPBYTE)pfnDirect3DCreate9);
+						bHooked = !bHooked;
+					}
+					
+					return iDirect3D9;
 				}
-				hooked = true;
-			}
+			</code></pre></p>
+		</ul>
+		<li>
+			<p>Use a vtable hook on the <em>device</em> to hook whatever the user requested</p>
+			<p><pre><code>
+				HRESULT __stdcall hook_CreateDevice( IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface )
+				{
+					HRESULT hRes = pfnCreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
 
-			return orig;
-		}
-		</code></pre></p>
-	</ul>
-	<li>
-		<p>Use a vtable hook on the <em>device</em> to hook whatever the user requested</p>
-		<p><pre><code>
-		HRESULT APIENTRY CDirectX9Hook::hook_CreateDevice(IDirect3D9* d3d, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS * pPresentationParameters, IDirect3DDevice9 ** ppReturnedDeviceInterface)
-		{
-			// Call the original to gain access to the created device
-			HRESULT result = orig_CreateDevice(d3d, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
+					static bool bHooked = false;
 
-			// Ensure that we dont hook twice
-			if (!pVtable) {
-				// Get the device's vtable
-				pVtable = CHook::GetVtableAddress((void*)*ppReturnedDeviceInterface);
-				
-				// Hook whatever needs hooking
-				ApplyPendingHooks();
-			}
+					if(!pTable && !bHooked) {
+						pTable = (DWORD *)(*(DWORD *)((void *)*ppReturnedDeviceInterface));
+						NewDetour((DWORD *)pDxTable, 16, (FARPROC)pfnCreateDevice);
+						SetSheduledHooks();		
+						bHooked = !bHooked;
+					}
 
-			return result;
-		}
-		</code></pre></p>
-	</ul>
+					return hRes;
+				}
+			</code></pre></p>
+		</ul>
 	</p>
 	
 	<h3>3.2 Runtime hook</h3>
 	<p>
-		This method is still work in progress. The way it works is to patch some universal location in <code>d3d9.dll</code> that accesses the device pointer 
-		to JMP to a code cave, which then gets the vtable from the object and calls a callback of the <code>CDirectX9Hook</code> class where the hooks are then 
+		This method is slightly experimental. The way it works is to patch some universal location in the <code>d3d9.dll</code> module that accesses the device pointer 
+		to JMP to a code cave, which then gets the vtable from the object and calls a callback function (<code>DirectX9Callback</code>) where the hooks are then 
 		applied. The JMP patch is then removed.
-		</p>
+	</p>
+	<p>
+		The code is explained below:
 		<p>
-		The work-in-progress code looks as follows (callback still needs to be implemented):
+		Step 1: Patch <code>d3d9.dll</code>
+		</p>
 		<p><pre><code>
-		void CDirectX9Hook::HookRuntime()
+		void InsertDirectX9Cave( void )
 		{
-			unsigned long base_d3d9 = (unsigned long)GetModuleHandle("d3d9.dll");	// Base address of d3d9.dll.
-			addr_t addr_jmp = (addr_t)(base_d3d9 + 0x6F20);				// Address of jmp patch.
-			addr_t addr_cave = (addr_t)(base_d3d9 + 0x1A86DE);			// Address of code cave.
-			addr_t deadbeef = (addr_t)&pVtable;					// Stores address of our vtable
-												// variable to copy into the asm
-												// instructions.
-
-			// See documentation for ASM listing
-			unsigned char patch_jmp[]	= {0xE9, 0xB9, 0x17, 0x1A, 0x00};
-			unsigned char patch_cave[]	= {0x8B, 0x0E, 0x8B, 0x51, 0x04, 0x50, 0x8B, 0xC6, 0x8B, 0x00, 0xA3, 0xEF, 0xBE, 0xAD, 0xDE, 0x58, 0xE9, 0x32, 0xE8, 0xE5, 0xFF};
+			DWORD dwOldJump, dwOldCave, dwDx9Base = (DWORD)GetModuleHandle("d3d9.dll");
+			DWORD *dwDx9Jump = (DWORD *)(dwDx9Base + 0x0B91B);
+			DWORD *dwDx9Cave = (DWORD *)(dwDx9Base + 0x1A86DE);
 			
-			// Copy the address of our vtable variable into the asm code so that the found vtable is copied
-			// directly into a class variable
-			memcpy((void*)((unsigned long)patch_cave + 11), (void*)&deadbeef, 4);
+			static DWORD  *pSetHookPtr = (DWORD *)DirectX9Callback;
+			static DWORD  **pFuncPtr = &pSetHookPtr, *pTableAddress = (DWORD *)&pTable;
 
-			// Remove write protection
-			DWORD dwOldProtect;
-			if (!VirtualProtect((void*)addr_jmp, 5, PAGE_EXECUTE_READWRITE, &dwOldProtect) ||
-				!VirtualProtect((void*)addr_cave, 21, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+			UCHAR patch_jmp[]	= { 0xE9, 0xBE, 0xCD, 0x19, 0x00 };
+			UCHAR patch_cave[]	= { 0x8B, 0x08, 0x8B, 0x51, 0x04, 0x50, 0x8B, 0x00, 0xA3,
+									0x90, 0x90, 0x90, 0x90, 0xA1, 0x66, 0x66, 0x66, 0x66,
+									0x60, 0xFF, 0xD0, 0x61, 0x58, 0xE9, 0x26, 0x32, 0xE6, 0xFF };
+
+			memcpy((void *)((DWORD)patch_cave +  9), (void *)&pTableAddress, 4);
+			memcpy((void *)((DWORD)patch_cave + 14), (void *)&pFuncPtr, 4);
+
+			if(!VirtualProtect((void *)dwDx9Jump,  5, PAGE_EXECUTE_READWRITE, &dwOldJump) ||
+			   !VirtualProtect((void *)dwDx9Cave, 28, PAGE_EXECUTE_READWRITE, &dwOldCave))
 					return;
 
-			// Write the instructions to d3d9.dll
-			memcpy((void*)addr_cave, (void*)patch_cave, 21);
-			memcpy((void*)addr_jmp, (void*)patch_jmp, 5);
+			memcpy((void *)dwDx9Cave, &patch_cave, 28);
+			memcpy((void *)dwDx9Jump, &patch_jmp,   5);
 
-			// Restore protection
-			VirtualProtect((void*)addr_jmp, 5, dwOldProtect, &dwOldProtect);
-			VirtualProtect((void*)addr_cave, 21, dwOldProtect, &dwOldProtect);
-
-			// To be removed: Rather use a callback that gets called directly from the code cave
-			hThread = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)thread_WaitForVtableAndHook, 0, 0, 0);
+			VirtualProtect((void *)dwDx9Jump,  5, dwOldJump, NULL);
+			VirtualProtect((void *)dwDx9Cave, 21, dwOldCave, NULL);
 		}
 		</code></pre></p>
+		<h4>
+			ASM Listings:
+		</h4>
 		<p>
 			The JMP patch:
 		</p>
@@ -276,7 +294,7 @@
 		</p>
 		<p>
 		The ideal approach (that I can think of) would be to create a dummy <code>IDirect3DDevice9</code> object and use IT to find the vtable. I almsot got it 
-		working but the call to <code>CreateDevice</code> (create the dummy device) fails.
+		working but the dummy pointer has a different vtable.
 	</p>
 	
 	<h3>3.3 Dynamic hook</h3>
@@ -288,4 +306,3 @@
 
   </body>
 </html>
-
