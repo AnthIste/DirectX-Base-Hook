@@ -134,20 +134,32 @@ void FreeLists( void )
 
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc ) 
 {
+	// NOTE:
+	// The InterlockedExchange crashes the target process. Reverted to working function for now
+	// Kept other one commented for completeness
+
+	/*DWORD dwOldProtect, *dwFuncAddress = (DWORD *)((DWORD)pVtable + nFuncOffset);
+
+	if(!VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
+		return NULL;
+
+	FARPROC pfnOrig = (FARPROC)InterlockedExchange((PLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
+
+	VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), dwOldProtect, NULL);
+
+	return pfnOrig;*/
+
 	DWORD dwOldProtect, *dwFuncAddress = (DWORD *)((DWORD)pVtable + nFuncOffset);
 
 	if(!VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), PAGE_EXECUTE_READWRITE, &dwOldProtect))
 		return NULL;
 
-#ifdef _WIN32
-	FARPROC pfnOrig = (FARPROC)InterlockedExchange((PLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
-#else
-	FARPROC pfnOrig = (FARPROC)InterlockedExchange64((PLONGLONG)pVtable[nFuncOffset], (LONG)((DWORD)pfnNewFunc));
-#endif
+	DWORD *pOrig = (DWORD *)pVtable[nFuncOffset];
+	pVtable[nFuncOffset] = (DWORD)pfnNewFunc;
 
 	VirtualProtect((void *)dwFuncAddress, sizeof(DWORD), dwOldProtect, NULL);
 
-	return pfnOrig;
+	return (FARPROC)pOrig;
 }
 
 void InsertDirectX9Cave( void )
