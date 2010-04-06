@@ -1,8 +1,0 @@
-~.gitignore
-Debug/
-Release/
-*/Debug
-*/Release
-*/*.ncb
-*.ncb
-DirectX-Base-Hook.suo
