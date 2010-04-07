@@ -1,0 +1,13 @@
+src/Debug
+src/Release
+src/*/Debug
+src/*/Release
+src/*.ncb
+src/*.suo
+
+examples/Debug
+examples/Release
+examples/*/Debug
+examples/*/Release
+examples/*.ncb
+examples/*.suo
