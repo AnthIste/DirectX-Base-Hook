@@ -11,3 +11,6 @@ examples/*/Debug
 examples/*/Release
 examples/*.ncb
 examples/*.suo
+
+bin/
+lib/
