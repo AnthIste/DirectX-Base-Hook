@@ -132,6 +132,8 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				// Unload the dll
 				if (!injector.Unload(dllName, exeName)) {
 					MessageBoxW(hWnd, L"Unloading failed", L"Injector", MB_ICONERROR);
+				} else {
+					MessageBoxW(hWnd, L"Dll unloaded!", L"Injector", MB_ICONINFORMATION);
 				}
 			}
 			break;
