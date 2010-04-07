@@ -1,3 +1,9 @@
+//
+// Author: AnthIste
+// Contact: anthiste.anthiste@gmail.com
+// Last updated: 07/04/2010
+//
+
 #ifndef INC_SYSTEM
 #define INC_SYSTEM
 

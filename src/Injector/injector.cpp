@@ -1,3 +1,9 @@
+//
+// Author: AnthIste
+// Contact: anthiste.anthiste@gmail.com
+// Last updated: 07/04/2010
+//
+
 #include "injector.h"
 
 // Static templated members must be explicitly declared in a source file
@@ -137,7 +143,13 @@ int CInjector::InjectAuto(std::wstring dllPath, std::wstring processPath)
 // Unloads an injected (not arbitrary) dll from the target process
 int CInjector::Unload(std::wstring dllName, std::wstring processName)
 {
+	dllName = StripPath(dllName);
 	HMODULE hModule = processes[processName].modules[dllName];
+
+	std::wstringstream ss;
+	ss << L"Unloading " << dllName << L" from " << processName;
+
+	MessageBoxW(0, ss.str().c_str(), L"Injector", MB_ICONINFORMATION);
 
 	// That dll hasnt been loaded, dont unload
 	if (!hModule) {
@@ -145,6 +157,7 @@ int CInjector::Unload(std::wstring dllName, std::wstring processName)
 	}
 
 	// Unload the dll
+	MessageBoxW(0, L"Module found! Unloading...", L"Injector", MB_ICONINFORMATION);
 
 	return 1;
 }

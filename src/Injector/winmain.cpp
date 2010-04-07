@@ -1,8 +1,23 @@
+//
+// Author: AnthIste
+// Contact: anthiste.anthiste@gmail.com
+// Last updated: 07/04/2010
+//
+
+//
+// This is a simple injector to be used alongside my and illuz1oN's
+// DirectX 9 hook. Feel free to modify it for your needs as long as
+// it remains explicitly stated in the code that this is a mod of
+// my original work. Thank you.
+//
+
 #include <windows.h>
+#include <CommCtrl.h>
+
 #include "resource.h"
 #include "system.h"
 #include "injector.h"
-#include <CommCtrl.h>
+
 #pragma comment(lib, "comctl32.lib")
 
 void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
@@ -108,7 +123,7 @@ void HandleEvent(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				wchar_t dllName[MAX_PATH] = {0}, exeName[MAX_PATH] = {0};
 				
 				// Get the path of the dll to unload
-				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, 0, reinterpret_cast<LPARAM>(dllName));
+				SendMessage(GetDlgItem(hWnd, IDC_EDIT_DLL), WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(dllName));
 
 				// Get the name of the target process
 				int exeIndex = SendMessage(GetDlgItem(hWnd, IDC_LIST_PROCESSES), LB_GETCURSEL, 0, 0);
