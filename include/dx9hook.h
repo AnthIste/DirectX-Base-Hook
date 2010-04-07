@@ -140,8 +140,7 @@
 #define DX9_CREATEQUERY 118
 
 void	DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
-void	RemoveDetour( UINT uOffset );
+void	DirectX9RemoveDetour( UINT uOffset );
 void	DirectX9Cleanup( void );
-FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc );
 
 #endif

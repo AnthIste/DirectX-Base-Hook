@@ -51,7 +51,7 @@ NTSTATUS	__stdcall LdrGetProcedureAddress( PVOID BaseAddress, PANSI_STRING Name,
 
 void	InsertDynamicDetour( LPCSTR lpLibName, LPCSTR lpFnName, FARPROC pfnDetour );
 void	DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig );
-void	RemoveDetour( UINT uOffset );
+void	DirectX9RemoveDetour( UINT uOffset );
 void	SetSheduledHooks( void );
 void	DirectX9Cleanup( void );
 FARPROC NewDetour( DWORD *pVtable, UINT nFuncOffset, FARPROC pfnNewFunc );

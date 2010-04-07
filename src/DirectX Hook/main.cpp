@@ -31,6 +31,7 @@ BOOL APIENTRY DllMain( HMODULE hInstance, DWORD dwReason, LPVOID lpReserved )
 			break;
 
 		case DLL_PROCESS_DETACH:
+			DirectX9RemoveDetour(DX9_ENDSCENE);
 			DirectX9Cleanup();
 			break;
 	}

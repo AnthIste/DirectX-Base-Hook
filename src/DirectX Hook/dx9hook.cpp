@@ -140,7 +140,7 @@ void DirectX9Detour( UINT uOffset, FARPROC pfnDetour, FARPROC pfnOrig )
 	}
 }
 
-void RemoveDetour( UINT uOffset )
+void DirectX9RemoveDetour( UINT uOffset )
 {
 	if(!pDetList)
 		return;

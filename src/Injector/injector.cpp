@@ -146,10 +146,10 @@ int CInjector::Unload(std::wstring dllName, std::wstring processName)
 	dllName = StripPath(dllName);
 	HMODULE hModule = processes[processName].modules[dllName];
 
-	std::wstringstream ss;
+	/*std::wstringstream ss;
 	ss << L"Unloading " << dllName << L" from " << processName;
 
-	MessageBoxW(0, ss.str().c_str(), L"Injector", MB_ICONINFORMATION);
+	MessageBoxW(0, ss.str().c_str(), L"Injector", MB_ICONINFORMATION);*/
 
 	// That dll hasnt been loaded, dont unload
 	if (!hModule) {
@@ -157,7 +157,73 @@ int CInjector::Unload(std::wstring dllName, std::wstring processName)
 	}
 
 	// Unload the dll
-	MessageBoxW(0, L"Module found! Unloading...", L"Injector", MB_ICONINFORMATION);
+	//MessageBoxW(0, L"Module found! Unloading...", L"Injector", MB_ICONINFORMATION);
+	HANDLE hProc, hThread;
+	DWORD pId, dwExit = 0;
+	void* pRemoteData;
+	FARPROC pFreeLibrary;
+
+	try {
+		// if pId not already specified, look for it
+		pId = GetProcessIdByName(processName);
+		
+		// if its still not found, serious error, abort
+		if (!pId) {
+			throw std::exception("Process ID not found");
+		}
+
+		// Open the process & get the process handle
+		hProc = OpenProcess(CREATE_THREAD_ACCESS, 0, pId);
+
+		if (!hProc) {
+			throw std::exception("Could not open process!");
+		}
+		
+		pRemoteData = VirtualAllocEx(hProc, 0, sizeof(HMODULE) * sizeof(wchar_t), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+		if (!pRemoteData) {
+			throw std::exception("Could not allocate remote memory!");
+		}
+
+		// Write a remote string of the dll path
+		if (!WriteProcessMemory(hProc, pRemoteData, (void*)&hModule, sizeof(HMODULE) * sizeof(wchar_t), 0)) {
+			throw std::exception("Could not write remote string!");
+		}
+
+		// Create remote thread of loadlibrary with path as paramater
+		pFreeLibrary = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "FreeLibrary");
+		if (!pFreeLibrary) {
+			throw std::exception("Could not find address of FreeLibrary!");
+		}
+
+		hThread = CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE)pFreeLibrary, pRemoteData, 0, 0);
+		if (!hThread) {
+			throw std::exception("Could not create remote thread!");
+		}
+
+		// Wait for the thread return code (HMODULE of loaded module)
+		WaitForSingleObject(hThread, INFINITE);
+		GetExitCodeThread(hThread, (DWORD*)&dwExit);
+
+		// Add the module to the process's module map
+		if (hModule) {
+			processes[processName].hProc = hProc;
+			processes[processName].name = processName;
+			processes[processName].modules[dllName] = hModule;
+		}
+
+		// Clean up
+		VirtualFreeEx(hProc, pRemoteData, sizeof(HMODULE) * sizeof(wchar_t), MEM_FREE);
+		CloseHandle(hProc);
+
+		// Return true if module unloaded succesfully, false otherwise
+		return static_cast<int>(dwExit);
+	}
+	catch (std::exception e) {
+		VirtualFreeEx(hProc, pRemoteData, sizeof(HMODULE) * sizeof(wchar_t), MEM_FREE);
+		CloseHandle(hProc);
+
+		throw;
+	}
 
 	return 1;
 }
